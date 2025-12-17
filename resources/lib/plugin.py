@@ -62,20 +62,16 @@ class ImmichPlugin:
         filename = asset.get('originalFileName', 'Unknown')
         created_at = asset.get('fileCreatedAt', '')
 
-        # Get thumbnail URL
-        thumb_url = self.client.get_asset_thumbnail(asset_id, 'preview')
-
+        # Don't download thumbnails for listing - use default icon
+        # Thumbnails will be downloaded on-demand when viewing
         list_item = xbmcgui.ListItem(label=filename)
         list_item.setArt({
-            'thumb': thumb_url,
-            'icon': thumb_url
+            'thumb': self.addon.getAddonInfo('icon'),
+            'icon': self.addon.getAddonInfo('icon')
         })
 
         # Set properties for images
-        info = {
-            'title': filename,
-            'picturepath': thumb_url
-        }
+        info = {'title': filename}
         if created_at:
             info['date'] = created_at[:10] if len(created_at) >= 10 else created_at
 
@@ -88,8 +84,8 @@ class ImmichPlugin:
             url = self._build_url(action='play_video', asset_id=asset_id)
             is_folder = False
         else:
-            # For images, link to full view
-            url = self.client.get_asset_original(asset_id)
+            # For images, use preview (JPEG) instead of original to avoid HEIC issues
+            url = self.client.get_asset_thumbnail(asset_id, 'preview')
             is_folder = False
             list_item.setProperty('IsPlayable', 'false')
 
@@ -510,9 +506,10 @@ class ImmichPlugin:
             )
             return
 
-        # For remote images, show the first image
-        first_image_url = self.client.get_asset_original(image_assets[0].get('id'))
-        xbmc.executebuiltin(f'ShowPicture({first_image_url})')
+        # Download and show the first image using preview (JPEG) to avoid HEIC issues
+        first_image_path = self.client.get_asset_thumbnail(image_assets[0].get('id'), 'preview')
+        if first_image_path:
+            xbmc.executebuiltin(f'ShowPicture({first_image_path})')
 
     def show_timeline(self):
         """Display timeline buckets."""
@@ -582,8 +579,10 @@ class ImmichPlugin:
         if not asset_id:
             return
 
-        image_url = self.client.get_asset_original(asset_id)
-        xbmc.executebuiltin(f'ShowPicture({image_url})')
+        # Use preview (JPEG) instead of original to avoid HEIC format issues
+        image_path = self.client.get_asset_thumbnail(asset_id, 'preview')
+        if image_path:
+            xbmc.executebuiltin(f'ShowPicture({image_path})')
 
     def play_video(self, asset_id):
         """Play a video asset."""
@@ -635,10 +634,11 @@ class ImmichPlugin:
             )
             return
 
-        # For remote images, show the first image
+        # Download and show the first image using preview (JPEG) to avoid HEIC issues
         # User can navigate with arrow keys in Kodi's picture viewer
-        first_image_url = self.client.get_asset_original(image_assets[0].get('id'))
-        xbmc.executebuiltin(f'ShowPicture({first_image_url})')
+        first_image_path = self.client.get_asset_thumbnail(image_assets[0].get('id'), 'preview')
+        if first_image_path:
+            xbmc.executebuiltin(f'ShowPicture({first_image_path})')
 
     def search(self):
         """Show search dialog and display results."""
