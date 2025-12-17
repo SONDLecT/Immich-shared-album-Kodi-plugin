@@ -63,7 +63,7 @@ class ImmichPlugin:
         created_at = asset.get('fileCreatedAt', '')
 
         # Get thumbnail URL
-        thumb_url = self.client.get_asset_thumbnail_url(asset_id, 'preview')
+        thumb_url = self.client.get_asset_thumbnail(asset_id, 'preview')
 
         list_item = xbmcgui.ListItem(label=filename)
         list_item.setArt({
@@ -89,7 +89,7 @@ class ImmichPlugin:
             is_folder = False
         else:
             # For images, link to full view
-            url = self.client.get_asset_original_url(asset_id)
+            url = self.client.get_asset_original(asset_id)
             is_folder = False
             list_item.setProperty('IsPlayable', 'false')
 
@@ -206,7 +206,7 @@ class ImmichPlugin:
             # Get thumbnail from album cover or first asset
             thumb = None
             if album.get('albumThumbnailAssetId'):
-                thumb = self.client.get_asset_thumbnail_url(
+                thumb = self.client.get_asset_thumbnail(
                     album.get('albumThumbnailAssetId'),
                     'preview'
                 )
@@ -246,7 +246,7 @@ class ImmichPlugin:
             # Get thumbnail
             thumb = None
             if album.get('albumThumbnailAssetId'):
-                thumb = self.client.get_asset_thumbnail_url(
+                thumb = self.client.get_asset_thumbnail(
                     album.get('albumThumbnailAssetId'),
                     'preview'
                 )
@@ -429,7 +429,7 @@ class ImmichPlugin:
                 label = f"{label} ({birth_date[:4]})"
 
             # Get face thumbnail
-            thumb = self.client.get_person_thumbnail_url(person_id)
+            thumb = self.client.get_person_thumbnail(person_id)
 
             # Context menu to start slideshow
             context_menu = [(
@@ -480,7 +480,7 @@ class ImmichPlugin:
             label=f'[Start Slideshow - {person_name}]',
             url=self._build_url(action='person_slideshow', person_id=person_id),
             is_folder=False,
-            thumb=self.client.get_person_thumbnail_url(person_id)
+            thumb=self.client.get_person_thumbnail(person_id)
         )
 
         for asset in assets:
@@ -511,7 +511,7 @@ class ImmichPlugin:
             return
 
         # For remote images, show the first image
-        first_image_url = self.client.get_asset_original_url(image_assets[0].get('id'))
+        first_image_url = self.client.get_asset_original(image_assets[0].get('id'))
         xbmc.executebuiltin(f'ShowPicture({first_image_url})')
 
     def show_timeline(self):
@@ -582,7 +582,7 @@ class ImmichPlugin:
         if not asset_id:
             return
 
-        image_url = self.client.get_asset_original_url(asset_id)
+        image_url = self.client.get_asset_original(asset_id)
         xbmc.executebuiltin(f'ShowPicture({image_url})')
 
     def play_video(self, asset_id):
@@ -590,7 +590,7 @@ class ImmichPlugin:
         if not asset_id:
             return
 
-        video_url = self.client.get_asset_video_playback_url(asset_id)
+        video_url = self.client.get_asset_video_playback(asset_id)
         asset_info = self.client.get_asset_info(asset_id)
 
         list_item = xbmcgui.ListItem(path=video_url)
@@ -637,7 +637,7 @@ class ImmichPlugin:
 
         # For remote images, show the first image
         # User can navigate with arrow keys in Kodi's picture viewer
-        first_image_url = self.client.get_asset_original_url(image_assets[0].get('id'))
+        first_image_url = self.client.get_asset_original(image_assets[0].get('id'))
         xbmc.executebuiltin(f'ShowPicture({first_image_url})')
 
     def search(self):
