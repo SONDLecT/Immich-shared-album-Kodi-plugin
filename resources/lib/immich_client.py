@@ -3,8 +3,12 @@ Immich API Client
 Handles all communication with the Immich server
 """
 
+import os
+import hashlib
 import requests
 import xbmc
+import xbmcvfs
+import xbmcaddon
 
 
 class ImmichClient:
@@ -25,6 +29,14 @@ class ImmichClient:
             'x-api-key': api_key,
             'Accept': 'application/json'
         }
+        # Set up cache directory
+        addon = xbmcaddon.Addon()
+        self.cache_dir = os.path.join(
+            xbmcvfs.translatePath(addon.getAddonInfo('profile')),
+            'cache'
+        )
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
 
     def _request(self, method, endpoint, params=None, json_data=None):
         """
@@ -53,6 +65,39 @@ class ImmichClient:
             return response.json() if response.content else None
         except requests.exceptions.RequestException as e:
             xbmc.log(f"[plugin.image.immich] API request failed: {e}", xbmc.LOGERROR)
+            return None
+
+    def _download_to_cache(self, url, cache_key, extension='.jpg'):
+        """
+        Download a file to local cache with authentication headers.
+
+        Args:
+            url: URL to download
+            cache_key: Unique key for caching
+            extension: File extension
+
+        Returns:
+            Local file path or None on error
+        """
+        # Create cache filename from hash of key
+        filename = hashlib.md5(cache_key.encode()).hexdigest() + extension
+        cache_path = os.path.join(self.cache_dir, filename)
+
+        # Return cached file if it exists
+        if os.path.exists(cache_path):
+            return cache_path
+
+        try:
+            response = requests.get(url, headers=self.headers, timeout=30, stream=True)
+            response.raise_for_status()
+
+            with open(cache_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            return cache_path
+        except requests.exceptions.RequestException as e:
+            xbmc.log(f"[plugin.image.immich] Download failed: {e}", xbmc.LOGERROR)
             return None
 
     def test_connection(self):
@@ -154,42 +199,56 @@ class ImmichClient:
         """
         return self._request('GET', f'/assets/{asset_id}')
 
-    def get_asset_thumbnail_url(self, asset_id, size='preview'):
+    def get_asset_thumbnail(self, asset_id, size='preview'):
         """
-        Get the URL for an asset's thumbnail.
+        Download and cache an asset's thumbnail.
 
         Args:
             asset_id: The asset's unique identifier
             size: Thumbnail size ('thumbnail' or 'preview')
 
         Returns:
-            URL string for the thumbnail
+            Local file path to the cached thumbnail
         """
-        return f"{self.base_url}/assets/{asset_id}/thumbnail?size={size}&key={self.api_key}"
+        url = f"{self.base_url}/assets/{asset_id}/thumbnail?size={size}"
+        cache_key = f"thumb_{asset_id}_{size}"
+        return self._download_to_cache(url, cache_key, '.jpg')
 
-    def get_asset_original_url(self, asset_id):
+    def get_asset_original(self, asset_id):
         """
-        Get the URL for an asset's original file.
+        Download and cache an asset's original file.
 
         Args:
             asset_id: The asset's unique identifier
 
         Returns:
-            URL string for the original file
+            Local file path to the cached original
         """
-        return f"{self.base_url}/assets/{asset_id}/original?key={self.api_key}"
+        # Get asset info to determine file type
+        asset_info = self.get_asset_info(asset_id)
+        ext = '.jpg'
+        if asset_info:
+            filename = asset_info.get('originalFileName', '')
+            if '.' in filename:
+                ext = '.' + filename.rsplit('.', 1)[-1].lower()
 
-    def get_asset_video_playback_url(self, asset_id):
+        url = f"{self.base_url}/assets/{asset_id}/original"
+        cache_key = f"orig_{asset_id}"
+        return self._download_to_cache(url, cache_key, ext)
+
+    def get_asset_video_playback(self, asset_id):
         """
-        Get the URL for video playback.
+        Download and cache a video for playback.
 
         Args:
             asset_id: The asset's unique identifier
 
         Returns:
-            URL string for video playback
+            Local file path to the cached video
         """
-        return f"{self.base_url}/assets/{asset_id}/video/playback?key={self.api_key}"
+        url = f"{self.base_url}/assets/{asset_id}/video/playback"
+        cache_key = f"video_{asset_id}"
+        return self._download_to_cache(url, cache_key, '.mp4')
 
     # Favorites
     def get_favorites(self, count=100):
@@ -296,17 +355,19 @@ class ImmichClient:
         """
         return self._request('GET', f'/people/{person_id}')
 
-    def get_person_thumbnail_url(self, person_id):
+    def get_person_thumbnail(self, person_id):
         """
-        Get the URL for a person's face thumbnail.
+        Download and cache a person's face thumbnail.
 
         Args:
             person_id: The person's unique identifier
 
         Returns:
-            URL string for the thumbnail
+            Local file path to the cached thumbnail
         """
-        return f"{self.base_url}/people/{person_id}/thumbnail?key={self.api_key}"
+        url = f"{self.base_url}/people/{person_id}/thumbnail"
+        cache_key = f"person_{person_id}"
+        return self._download_to_cache(url, cache_key, '.jpg')
 
     def get_person_assets(self, person_id, count=200):
         """
