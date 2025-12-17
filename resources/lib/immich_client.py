@@ -165,7 +165,7 @@ class ImmichClient:
         Returns:
             URL string for the thumbnail
         """
-        return f"{self.base_url}/assets/{asset_id}/thumbnail?size={size}&api_key={self.api_key}"
+        return f"{self.base_url}/assets/{asset_id}/thumbnail?size={size}&key={self.api_key}"
 
     def get_asset_original_url(self, asset_id):
         """
@@ -177,7 +177,7 @@ class ImmichClient:
         Returns:
             URL string for the original file
         """
-        return f"{self.base_url}/assets/{asset_id}/original?api_key={self.api_key}"
+        return f"{self.base_url}/assets/{asset_id}/original?key={self.api_key}"
 
     def get_asset_video_playback_url(self, asset_id):
         """
@@ -189,7 +189,7 @@ class ImmichClient:
         Returns:
             URL string for video playback
         """
-        return f"{self.base_url}/assets/{asset_id}/video/playback?api_key={self.api_key}"
+        return f"{self.base_url}/assets/{asset_id}/video/playback?key={self.api_key}"
 
     # Favorites
     def get_favorites(self, count=100):
@@ -306,7 +306,7 @@ class ImmichClient:
         Returns:
             URL string for the thumbnail
         """
-        return f"{self.base_url}/people/{person_id}/thumbnail?api_key={self.api_key}"
+        return f"{self.base_url}/people/{person_id}/thumbnail?key={self.api_key}"
 
     def get_person_assets(self, person_id, count=200):
         """
