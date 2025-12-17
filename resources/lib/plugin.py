@@ -424,6 +424,38 @@ class ImmichPlugin:
 
         self._end_directory(content_type='images')
 
+    def show_timeline_bucket(self, time_bucket):
+        """Display assets from a specific timeline bucket."""
+        if not time_bucket:
+            xbmcgui.Dialog().notification(
+                self.addon.getAddonInfo('name'),
+                'Invalid time bucket',
+                xbmcgui.NOTIFICATION_ERROR
+            )
+            return
+
+        assets = self.client.get_timeline_bucket(time_bucket)
+
+        if not assets:
+            xbmcgui.Dialog().notification(
+                self.addon.getAddonInfo('name'),
+                'No photos in this period',
+                xbmcgui.NOTIFICATION_INFO
+            )
+            self._end_directory()
+            return
+
+        for asset in assets:
+            self._add_image_item(asset)
+
+        self._end_directory(
+            content_type='images',
+            sort_methods=[
+                xbmcplugin.SORT_METHOD_NONE,
+                xbmcplugin.SORT_METHOD_DATE
+            ]
+        )
+
     def view_image(self, asset_id):
         """View a single image."""
         if not asset_id:

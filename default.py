@@ -72,6 +72,9 @@ def main():
         plugin.show_favorites()
     elif action == 'timeline':
         plugin.show_timeline()
+    elif action == 'timeline_bucket':
+        bucket = params.get('bucket')
+        plugin.show_timeline_bucket(bucket)
     elif action == 'view_image':
         asset_id = params.get('asset_id')
         plugin.view_image(asset_id)
