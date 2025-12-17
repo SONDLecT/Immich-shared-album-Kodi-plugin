@@ -510,18 +510,9 @@ class ImmichPlugin:
             )
             return
 
-        # Build a playlist of images and start slideshow
-        playlist = xbmc.PlayList(xbmc.PLAYLIST_PICTURE)
-        playlist.clear()
-
-        for asset in image_assets:
-            url = self.client.get_asset_original_url(asset.get('id'))
-            list_item = xbmcgui.ListItem(asset.get('originalFileName', 'Image'))
-            list_item.setArt({'thumb': self.client.get_asset_thumbnail_url(asset.get('id'))})
-            playlist.add(url, list_item)
-
-        # Start the slideshow
-        xbmc.Player().play(playlist)
+        # For remote images, show the first image
+        first_image_url = self.client.get_asset_original_url(image_assets[0].get('id'))
+        xbmc.executebuiltin(f'ShowPicture({first_image_url})')
 
     def show_timeline(self):
         """Display timeline buckets."""
@@ -644,18 +635,10 @@ class ImmichPlugin:
             )
             return
 
-        # Build a playlist of images and start slideshow
-        playlist = xbmc.PlayList(xbmc.PLAYLIST_PICTURE)
-        playlist.clear()
-
-        for asset in image_assets:
-            url = self.client.get_asset_original_url(asset.get('id'))
-            list_item = xbmcgui.ListItem(asset.get('originalFileName', 'Image'))
-            list_item.setArt({'thumb': self.client.get_asset_thumbnail_url(asset.get('id'))})
-            playlist.add(url, list_item)
-
-        # Start the slideshow
-        xbmc.Player().play(playlist)
+        # For remote images, show the first image
+        # User can navigate with arrow keys in Kodi's picture viewer
+        first_image_url = self.client.get_asset_original_url(image_assets[0].get('id'))
+        xbmc.executebuiltin(f'ShowPicture({first_image_url})')
 
     def search(self):
         """Show search dialog and display results."""
