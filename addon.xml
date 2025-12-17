@@ -23,7 +23,7 @@
         <news>v1.0.0 - Initial release with album browsing and slideshow support</news>
         <assets>
             <icon>resources/icon.png</icon>
-            <fanart>resources/fanart.jpg</fanart>
+            <fanart>resources/fanart.png</fanart>
         </assets>
     </extension>
 </addon>

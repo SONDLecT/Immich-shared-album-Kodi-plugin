@@ -121,7 +121,7 @@ plugin.image.immich/
 ├── README.md
 └── resources/
     ├── icon.png           # Addon icon (256x256)
-    ├── fanart.jpg         # Addon fanart (1920x1080)
+    ├── fanart.png         # Addon fanart
     ├── settings.xml       # Settings definition
     ├── language/
     │   └── resource.language.en_gb/
