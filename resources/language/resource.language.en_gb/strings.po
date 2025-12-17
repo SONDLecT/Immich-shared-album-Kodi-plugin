@@ -1,0 +1,138 @@
+# Kodi Media Center language file
+# Addon Name: Immich
+# Addon id: plugin.image.immich
+# Addon Provider: Immich Kodi Community
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.image.immich\n"
+"Report-Msgid-Bugs-To: https://github.com/SONDLecT/Immich-shared-album-Kodi-plugin\n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Settings - Server
+msgctxt "#30001"
+msgid "Server"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Immich Server URL"
+msgstr ""
+
+msgctxt "#30003"
+msgid "The URL of your Immich server (e.g., https://immich.example.com)"
+msgstr ""
+
+msgctxt "#30004"
+msgid "API Key"
+msgstr ""
+
+msgctxt "#30005"
+msgid "Your Immich API key (generate from Account Settings > API Keys)"
+msgstr ""
+
+# Settings - Display
+msgctxt "#30010"
+msgid "Display"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Thumbnail Size"
+msgstr ""
+
+msgctxt "#30012"
+msgid "Size of thumbnails shown in listings"
+msgstr ""
+
+msgctxt "#30013"
+msgid "Small"
+msgstr ""
+
+msgctxt "#30014"
+msgid "Large"
+msgstr ""
+
+msgctxt "#30015"
+msgid "Slideshow Interval"
+msgstr ""
+
+msgctxt "#30016"
+msgid "Time between slides in seconds"
+msgstr ""
+
+msgctxt "#30017"
+msgid "{0:d} seconds"
+msgstr ""
+
+# Main Menu
+msgctxt "#30100"
+msgid "My Albums"
+msgstr ""
+
+msgctxt "#30101"
+msgid "Shared Albums"
+msgstr ""
+
+msgctxt "#30102"
+msgid "Shared Links"
+msgstr ""
+
+msgctxt "#30103"
+msgid "Favorites"
+msgstr ""
+
+msgctxt "#30104"
+msgid "Timeline"
+msgstr ""
+
+msgctxt "#30105"
+msgid "Search"
+msgstr ""
+
+# Actions
+msgctxt "#30200"
+msgid "Start Slideshow"
+msgstr ""
+
+msgctxt "#30201"
+msgid "View Image"
+msgstr ""
+
+msgctxt "#30202"
+msgid "Play Video"
+msgstr ""
+
+# Messages
+msgctxt "#30300"
+msgid "No albums found"
+msgstr ""
+
+msgctxt "#30301"
+msgid "No shared albums found"
+msgstr ""
+
+msgctxt "#30302"
+msgid "No favorites found"
+msgstr ""
+
+msgctxt "#30303"
+msgid "No results found"
+msgstr ""
+
+msgctxt "#30304"
+msgid "Could not connect to server"
+msgstr ""
+
+msgctxt "#30305"
+msgid "Please configure your server settings"
+msgstr ""
+
+msgctxt "#30306"
+msgid "Album is empty"
+msgstr ""
