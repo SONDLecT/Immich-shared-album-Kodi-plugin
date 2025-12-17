@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.image.immich" name="Immich" version="1.0.0" provider-name="Immich Kodi Community">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+        <import addon="script.module.requests" version="2.22.0"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>image video</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_GB">Browse your Immich photo library</summary>
+        <summary lang="en_US">Browse your Immich photo library</summary>
+        <description lang="en_GB">Connect to your self-hosted Immich server to browse albums, shared albums, and view your photos and videos directly in Kodi. Supports slideshows and video playback.</description>
+        <description lang="en_US">Connect to your self-hosted Immich server to browse albums, shared albums, and view your photos and videos directly in Kodi. Supports slideshows and video playback.</description>
+        <disclaimer lang="en_GB">This plugin requires a running Immich server and valid API key.</disclaimer>
+        <disclaimer lang="en_US">This plugin requires a running Immich server and valid API key.</disclaimer>
+        <language>en</language>
+        <platform>all</platform>
+        <license>MIT</license>
+        <forum></forum>
+        <website>https://github.com/SONDLecT/Immich-shared-album-Kodi-plugin</website>
+        <source>https://github.com/SONDLecT/Immich-shared-album-Kodi-plugin</source>
+        <news>v1.0.0 - Initial release with album browsing and slideshow support</news>
+        <assets>
+            <icon>resources/icon.png</icon>
+            <fanart>resources/fanart.jpg</fanart>
+        </assets>
+    </extension>
+</addon>

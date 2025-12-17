@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings version="2">
+    <section id="connection">
+        <category id="server" label="30001">
+            <group id="server_settings">
+                <setting id="server_url" type="string" label="30002" help="30003">
+                    <level>0</level>
+                    <default></default>
+                    <constraints>
+                        <allowempty>false</allowempty>
+                    </constraints>
+                    <control type="edit" format="string">
+                        <heading>30002</heading>
+                    </control>
+                </setting>
+                <setting id="api_key" type="string" label="30004" help="30005">
+                    <level>0</level>
+                    <default></default>
+                    <constraints>
+                        <allowempty>false</allowempty>
+                    </constraints>
+                    <control type="edit" format="string">
+                        <heading>30004</heading>
+                        <hidden>true</hidden>
+                    </control>
+                </setting>
+            </group>
+        </category>
+    </section>
+    <section id="display">
+        <category id="display_settings" label="30010">
+            <group id="image_settings">
+                <setting id="thumbnail_size" type="string" label="30011" help="30012">
+                    <level>1</level>
+                    <default>preview</default>
+                    <constraints>
+                        <options>
+                            <option label="30013">thumbnail</option>
+                            <option label="30014">preview</option>
+                        </options>
+                    </constraints>
+                    <control type="list" format="string">
+                        <heading>30011</heading>
+                    </control>
+                </setting>
+                <setting id="slideshow_interval" type="integer" label="30015" help="30016">
+                    <level>1</level>
+                    <default>5</default>
+                    <constraints>
+                        <minimum>1</minimum>
+                        <maximum>60</maximum>
+                        <step>1</step>
+                    </constraints>
+                    <control type="slider" format="integer">
+                        <heading>30015</heading>
+                        <formatlabel>30017</formatlabel>
+                    </control>
+                </setting>
+            </group>
+        </category>
+    </section>
+</settings>

@@ -1,0 +1,1 @@
+# Immich Kodi Plugin Library
