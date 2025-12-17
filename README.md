@@ -34,7 +34,21 @@ The addon will be available in the Kodi addon repository in the future.
 
 ## Configuration
 
-Before using the addon, you need to configure your Immich server connection:
+### Option 1: Pre-configure with config.txt (Recommended)
+
+For easy setup without typing in Kodi:
+
+1. Before installing, create a `config.txt` file in the addon folder:
+   ```
+   server_url=https://immich.example.com
+   api_key=your-api-key-here
+   ```
+2. You can copy `config.txt.example` as a template
+3. Install the addon - settings will be imported automatically
+
+**Security Note:** The `config.txt` file contains your API key. Don't commit it to version control.
+
+### Option 2: Configure in Kodi Settings
 
 1. Go to **Add-ons** > **My add-ons** > **Picture add-ons** > **Immich**
 2. Select **Configure**
@@ -67,6 +81,7 @@ When you open the addon, you'll see the following options:
 - **Shared Albums** - Browse albums shared with you
 - **Shared Links** - Access shared links you've created
 - **Favorites** - View your favorite photos and videos
+- **People** - Browse by recognized faces
 - **Timeline** - Browse photos by month
 - **Search** - Search your photo library
 

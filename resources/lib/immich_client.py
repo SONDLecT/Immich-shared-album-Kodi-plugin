@@ -192,14 +192,23 @@ class ImmichClient:
         return f"{self.base_url}/assets/{asset_id}/video/playback?api_key={self.api_key}"
 
     # Favorites
-    def get_favorites(self):
+    def get_favorites(self, count=100):
         """
-        Get all favorite assets.
+        Get favorite assets using smart search.
+
+        Args:
+            count: Maximum number of favorites to return
 
         Returns:
             List of favorite asset objects
         """
-        return self._request('GET', '/assets', params={'isFavorite': 'true'}) or []
+        result = self._request('POST', '/search/smart', json_data={
+            'isFavorite': True,
+            'size': count
+        })
+        if result and 'assets' in result:
+            return result['assets'].get('items', [])
+        return []
 
     # Timeline/All assets
     def get_timeline_buckets(self):
@@ -209,7 +218,7 @@ class ImmichClient:
         Returns:
             List of timeline bucket objects
         """
-        return self._request('GET', '/timeline/buckets', params={'size': 'MONTH'}) or []
+        return self._request('GET', '/timeline/buckets') or []
 
     def get_timeline_bucket(self, time_bucket):
         """
@@ -222,14 +231,13 @@ class ImmichClient:
             List of assets in the bucket
         """
         return self._request('GET', '/timeline/bucket', params={
-            'size': 'MONTH',
             'timeBucket': time_bucket
         }) or []
 
     # Search
     def search_assets(self, query, media_type=None):
         """
-        Search for assets.
+        Search for assets using smart search.
 
         Args:
             query: Search query string
@@ -238,7 +246,7 @@ class ImmichClient:
         Returns:
             Search results object
         """
-        search_params = {'q': query}
+        search_params = {'query': query}
         if media_type:
             search_params['type'] = media_type
         return self._request('POST', '/search/smart', json_data=search_params)
@@ -256,6 +264,68 @@ class ImmichClient:
         return self._request('POST', '/search/metadata', json_data={
             'originalFileName': query
         })
+
+    # People (face recognition)
+    def get_all_people(self, with_hidden=False):
+        """
+        Get all recognized people.
+
+        Args:
+            with_hidden: Include hidden people
+
+        Returns:
+            List of person objects
+        """
+        result = self._request('GET', '/people', params={
+            'withHidden': str(with_hidden).lower(),
+            'size': 500
+        })
+        if result and 'people' in result:
+            return result['people']
+        return result if isinstance(result, list) else []
+
+    def get_person(self, person_id):
+        """
+        Get a specific person's details.
+
+        Args:
+            person_id: The person's unique identifier
+
+        Returns:
+            Person object
+        """
+        return self._request('GET', f'/people/{person_id}')
+
+    def get_person_thumbnail_url(self, person_id):
+        """
+        Get the URL for a person's face thumbnail.
+
+        Args:
+            person_id: The person's unique identifier
+
+        Returns:
+            URL string for the thumbnail
+        """
+        return f"{self.base_url}/people/{person_id}/thumbnail?api_key={self.api_key}"
+
+    def get_person_assets(self, person_id, count=200):
+        """
+        Get all assets featuring a specific person.
+
+        Args:
+            person_id: The person's unique identifier
+            count: Maximum number of assets to return
+
+        Returns:
+            List of asset objects
+        """
+        result = self._request('POST', '/search/smart', json_data={
+            'personIds': [person_id],
+            'size': count
+        })
+        if result and 'assets' in result:
+            return result['assets'].get('items', [])
+        return []
 
     # Server info
     def get_server_info(self):
