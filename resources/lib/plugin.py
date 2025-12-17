@@ -162,6 +162,13 @@ class ImmichPlugin:
             thumb=self.addon.getAddonInfo('icon')
         )
 
+        # People
+        self._add_directory_item(
+            label='People',
+            url=self._build_url(action='people'),
+            thumb=self.addon.getAddonInfo('icon')
+        )
+
         # Timeline
         self._add_directory_item(
             label='Timeline',
@@ -393,6 +400,129 @@ class ImmichPlugin:
 
         self._end_directory(content_type='images')
 
+    def show_people(self):
+        """Display all recognized people."""
+        people = self.client.get_all_people()
+
+        if not people:
+            xbmcgui.Dialog().notification(
+                self.addon.getAddonInfo('name'),
+                'No people found',
+                xbmcgui.NOTIFICATION_INFO
+            )
+            self._end_directory()
+            return
+
+        for person in people:
+            person_id = person.get('id')
+            name = person.get('name', '')
+            birth_date = person.get('birthDate', '')
+
+            # Use name if set, otherwise show as "Unknown"
+            if name:
+                label = name
+            else:
+                label = 'Unknown Person'
+
+            # Add birth date if available
+            if birth_date:
+                label = f"{label} ({birth_date[:4]})"
+
+            # Get face thumbnail
+            thumb = self.client.get_person_thumbnail_url(person_id)
+
+            # Context menu to start slideshow
+            context_menu = [(
+                'Start Slideshow',
+                f'RunPlugin({self._build_url(action="person_slideshow", person_id=person_id)})'
+            )]
+
+            self._add_directory_item(
+                label=label,
+                url=self._build_url(action='person', person_id=person_id),
+                thumb=thumb,
+                info_labels={'title': name or 'Unknown'},
+                context_menu=context_menu
+            )
+
+        self._end_directory(
+            content_type='images',
+            sort_methods=[xbmcplugin.SORT_METHOD_LABEL]
+        )
+
+    def show_person_photos(self, person_id):
+        """Display all photos of a specific person."""
+        if not person_id:
+            xbmcgui.Dialog().notification(
+                self.addon.getAddonInfo('name'),
+                'Invalid person',
+                xbmcgui.NOTIFICATION_ERROR
+            )
+            return
+
+        # Get person info for the title
+        person = self.client.get_person(person_id)
+        person_name = person.get('name', 'Unknown') if person else 'Unknown'
+
+        assets = self.client.get_person_assets(person_id)
+
+        if not assets:
+            xbmcgui.Dialog().notification(
+                self.addon.getAddonInfo('name'),
+                f'No photos found for {person_name}',
+                xbmcgui.NOTIFICATION_INFO
+            )
+            self._end_directory()
+            return
+
+        # Add slideshow option at the top
+        self._add_directory_item(
+            label=f'[Start Slideshow - {person_name}]',
+            url=self._build_url(action='person_slideshow', person_id=person_id),
+            is_folder=False,
+            thumb=self.client.get_person_thumbnail_url(person_id)
+        )
+
+        for asset in assets:
+            self._add_image_item(asset)
+
+        self._end_directory(
+            content_type='images',
+            sort_methods=[
+                xbmcplugin.SORT_METHOD_NONE,
+                xbmcplugin.SORT_METHOD_DATE
+            ]
+        )
+
+    def start_person_slideshow(self, person_id):
+        """Start a slideshow for a person's photos."""
+        if not person_id:
+            return
+
+        assets = self.client.get_person_assets(person_id)
+        image_assets = [a for a in assets if a.get('type') == 'IMAGE']
+
+        if not image_assets:
+            xbmcgui.Dialog().notification(
+                self.addon.getAddonInfo('name'),
+                'No images found for this person',
+                xbmcgui.NOTIFICATION_INFO
+            )
+            return
+
+        # Build a playlist of images and start slideshow
+        playlist = xbmc.PlayList(xbmc.PLAYLIST_PICTURE)
+        playlist.clear()
+
+        for asset in image_assets:
+            url = self.client.get_asset_original_url(asset.get('id'))
+            list_item = xbmcgui.ListItem(asset.get('originalFileName', 'Image'))
+            list_item.setArt({'thumb': self.client.get_asset_thumbnail_url(asset.get('id'))})
+            playlist.add(url, list_item)
+
+        # Start the slideshow
+        xbmc.Player().play(playlist)
+
     def show_timeline(self):
         """Display timeline buckets."""
         buckets = self.client.get_timeline_buckets()
@@ -514,9 +644,18 @@ class ImmichPlugin:
             )
             return
 
-        # Start slideshow with the first image
-        first_image_url = self.client.get_asset_original_url(image_assets[0].get('id'))
-        xbmc.executebuiltin(f'SlideShow({first_image_url},recursive)')
+        # Build a playlist of images and start slideshow
+        playlist = xbmc.PlayList(xbmc.PLAYLIST_PICTURE)
+        playlist.clear()
+
+        for asset in image_assets:
+            url = self.client.get_asset_original_url(asset.get('id'))
+            list_item = xbmcgui.ListItem(asset.get('originalFileName', 'Image'))
+            list_item.setArt({'thumb': self.client.get_asset_thumbnail_url(asset.get('id'))})
+            playlist.add(url, list_item)
+
+        # Start the slideshow
+        xbmc.Player().play(playlist)
 
     def search(self):
         """Show search dialog and display results."""

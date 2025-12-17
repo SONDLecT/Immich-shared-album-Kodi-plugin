@@ -70,6 +70,14 @@ def main():
         plugin.show_shared_links()
     elif action == 'favorites':
         plugin.show_favorites()
+    elif action == 'people':
+        plugin.show_people()
+    elif action == 'person':
+        person_id = params.get('person_id')
+        plugin.show_person_photos(person_id)
+    elif action == 'person_slideshow':
+        person_id = params.get('person_id')
+        plugin.start_person_slideshow(person_id)
     elif action == 'timeline':
         plugin.show_timeline()
     elif action == 'timeline_bucket':

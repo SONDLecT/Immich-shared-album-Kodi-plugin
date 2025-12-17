@@ -265,6 +265,68 @@ class ImmichClient:
             'originalFileName': query
         })
 
+    # People (face recognition)
+    def get_all_people(self, with_hidden=False):
+        """
+        Get all recognized people.
+
+        Args:
+            with_hidden: Include hidden people
+
+        Returns:
+            List of person objects
+        """
+        result = self._request('GET', '/people', params={
+            'withHidden': str(with_hidden).lower(),
+            'size': 500
+        })
+        if result and 'people' in result:
+            return result['people']
+        return result if isinstance(result, list) else []
+
+    def get_person(self, person_id):
+        """
+        Get a specific person's details.
+
+        Args:
+            person_id: The person's unique identifier
+
+        Returns:
+            Person object
+        """
+        return self._request('GET', f'/people/{person_id}')
+
+    def get_person_thumbnail_url(self, person_id):
+        """
+        Get the URL for a person's face thumbnail.
+
+        Args:
+            person_id: The person's unique identifier
+
+        Returns:
+            URL string for the thumbnail
+        """
+        return f"{self.base_url}/people/{person_id}/thumbnail?api_key={self.api_key}"
+
+    def get_person_assets(self, person_id, count=200):
+        """
+        Get all assets featuring a specific person.
+
+        Args:
+            person_id: The person's unique identifier
+            count: Maximum number of assets to return
+
+        Returns:
+            List of asset objects
+        """
+        result = self._request('POST', '/search/smart', json_data={
+            'personIds': [person_id],
+            'size': count
+        })
+        if result and 'assets' in result:
+            return result['assets'].get('items', [])
+        return []
+
     # Server info
     def get_server_info(self):
         """Get server version and feature information."""
