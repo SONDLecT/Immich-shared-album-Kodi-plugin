@@ -1,0 +1,10 @@
+# Immich Kodi Plugin Configuration
+#
+# Copy this file to config.txt and fill in your values.
+# The plugin will automatically import these settings on first run.
+#
+# SECURITY NOTE: config.txt contains your API key.
+# Do not commit it to version control or share it.
+
+server_url=https://immich.example.com
+api_key=your-api-key-here
