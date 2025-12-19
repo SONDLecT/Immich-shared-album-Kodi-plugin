@@ -3,6 +3,8 @@
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="script.module.requests" version="2.22.0"/>
+        <!-- Optional: HEIF decoder for Apple HEIC photos -->
+        <import addon="imagedecoder.heif" optional="true"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
         <provides>image video</provides>

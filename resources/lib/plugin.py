@@ -7,6 +7,7 @@ import urllib.parse
 import xbmc
 import xbmcgui
 import xbmcplugin
+import xbmcaddon
 
 
 class ImmichPlugin:
@@ -27,6 +28,23 @@ class ImmichPlugin:
         self.addon = addon
         self.client = client
         self.addon_id = addon.getAddonInfo('id')
+        self._heif_warned = False
+
+    def _check_heif_addon(self):
+        """Check if HEIF image decoder is installed and warn if not."""
+        if self._heif_warned:
+            return
+        try:
+            xbmcaddon.Addon('imagedecoder.heif')
+        except RuntimeError:
+            # HEIF addon not installed - show one-time warning
+            self._heif_warned = True
+            xbmcgui.Dialog().notification(
+                'HEIF Decoder Missing',
+                'Install "HEIF image decoder" addon for Apple HEIC photo support',
+                xbmcgui.NOTIFICATION_WARNING,
+                5000
+            )
 
     def _build_url(self, **kwargs):
         """Build a plugin URL with the given parameters."""
@@ -84,8 +102,8 @@ class ImmichPlugin:
             url = self._build_url(action='play_video', asset_id=asset_id)
             is_folder = False
         else:
-            # For images, use preview (JPEG) instead of original to avoid HEIC issues
-            url = self.client.get_asset_thumbnail(asset_id, 'preview')
+            # For images, use original file (requires HEIF addon for Apple photos)
+            url = self.client.get_asset_original(asset_id)
             is_folder = False
             list_item.setProperty('IsPlayable', 'false')
 
@@ -506,8 +524,9 @@ class ImmichPlugin:
             )
             return
 
-        # Download and show the first image using preview (JPEG) to avoid HEIC issues
-        first_image_path = self.client.get_asset_thumbnail(image_assets[0].get('id'), 'preview')
+        # Download and show the first image (requires HEIF addon for Apple photos)
+        self._check_heif_addon()
+        first_image_path = self.client.get_asset_original(image_assets[0].get('id'))
         if first_image_path:
             xbmc.executebuiltin(f'ShowPicture({first_image_path})')
 
@@ -579,8 +598,8 @@ class ImmichPlugin:
         if not asset_id:
             return
 
-        # Use preview (JPEG) instead of original to avoid HEIC format issues
-        image_path = self.client.get_asset_thumbnail(asset_id, 'preview')
+        self._check_heif_addon()
+        image_path = self.client.get_asset_original(asset_id)
         if image_path:
             xbmc.executebuiltin(f'ShowPicture({image_path})')
 
@@ -634,9 +653,10 @@ class ImmichPlugin:
             )
             return
 
-        # Download and show the first image using preview (JPEG) to avoid HEIC issues
+        # Download and show the first image (requires HEIF addon for Apple photos)
         # User can navigate with arrow keys in Kodi's picture viewer
-        first_image_path = self.client.get_asset_thumbnail(image_assets[0].get('id'), 'preview')
+        self._check_heif_addon()
+        first_image_path = self.client.get_asset_original(image_assets[0].get('id'))
         if first_image_path:
             xbmc.executebuiltin(f'ShowPicture({first_image_path})')
 
