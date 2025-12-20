@@ -1,190 +1,222 @@
-# Immich Kodi Plugin
+# Immich Kodi Addons
 
-A Kodi addon to browse and view your [Immich](https://immich.app/) photo library directly in Kodi.
+> **⚠️ Work in Progress**: This project is under active development. Features may be incomplete or change. Feedback and contributions welcome!
 
-## Features
+Kodi addons to browse, view, and display photos from your [Immich](https://immich.app/) self-hosted photo server.
+
+## Addons Included
+
+| Addon | Description |
+|-------|-------------|
+| **plugin.image.immich** | Browse and view your Immich photo library in Kodi |
+| **screensaver.immich** | Photo screensaver that displays images from Immich |
+
+---
+
+## Plugin: Browse Immich Library
+
+### Features
 
 - **Browse Albums** - View your personal albums
 - **Shared Albums** - Access albums shared with you by other users
 - **Shared Links** - Browse shared links you've created
 - **Favorites** - Quick access to your favorite photos and videos
+- **People** - Browse photos by recognized faces
 - **Timeline** - Browse your photos organized by date
 - **Search** - Find photos using Immich's smart search
-- **Slideshow** - Start slideshows from any album
+- **Slideshow** - Start slideshows from any album or person
 - **Video Playback** - Play videos directly in Kodi
+
+---
+
+## Screensaver: Immich Photos
+
+A beautiful screensaver that displays photos from your Immich server.
+
+### Features
+
+- **Multiple Photo Sources**:
+  - Random photos from entire library
+  - Specific album
+  - All shared albums
+  - Specific people (supports multiple!)
+  - Favorites only
+- **Photo Info Overlay** - Shows filename, date, and location
+- **Configurable Display Time** - 3-60 seconds per photo
+- **Multiple Person Selection** - Comma-separated person IDs for family slideshows
+
+---
 
 ## Requirements
 
 - Kodi 19 (Matrix) or later
 - A running [Immich](https://immich.app/) server (v1.90.0+)
 - An Immich API key
+- **For Apple HEIC photos**: Install the "HEIF image decoder" addon from Kodi's official repository
 
 ## Installation
 
-### Manual Installation
+### Step 1: Clone or Download
 
-1. Download the latest release as a ZIP file
-2. In Kodi, go to **Add-ons** > **Install from zip file**
-3. Navigate to the downloaded ZIP file and select it
-4. The addon will be installed
+```bash
+git clone https://github.com/SONDLecT/Immich-shared-album-Kodi-plugin
+cd Immich-shared-album-Kodi-plugin
+```
 
-### From Repository (Coming Soon)
+### Step 2: Configure
 
-The addon will be available in the Kodi addon repository in the future.
+Create your `config.txt` file with your Immich credentials:
 
-## Configuration
+```bash
+# For the plugin
+cp config.txt.example config.txt
+nano config.txt  # Add your server_url and api_key
 
-### Option 1: Pre-configure with config.txt (Recommended)
+# For the screensaver (uses same format)
+cp config.txt screensaver.immich/config.txt
+```
 
-For easy setup without typing in Kodi:
+Example `config.txt`:
+```
+server_url=https://immich.example.com
+api_key=your-api-key-here
+```
 
-1. Before installing, create a `config.txt` file in the addon folder:
-   ```
-   server_url=https://immich.example.com
-   api_key=your-api-key-here
-   ```
-2. You can copy `config.txt.example` as a template
-3. Install the addon - settings will be imported automatically
+### Step 3: Build ZIP Files
 
-**Security Note:** The `config.txt` file contains your API key. Don't commit it to version control.
+```bash
+# Build the plugin
+mkdir -p plugin.image.immich
+cp addon.xml default.py LICENSE README.md config.txt plugin.image.immich/
+cp -r resources plugin.image.immich/
+zip -r plugin.image.immich.zip plugin.image.immich
 
-### Option 2: Configure in Kodi Settings
+# Build the screensaver
+cd screensaver.immich
+mkdir -p ../screensaver.immich.zip.tmp
+cp -r * ../screensaver.immich.zip.tmp/
+cd ..
+mv screensaver.immich.zip.tmp screensaver.immich-pkg
+zip -r screensaver.immich.zip screensaver.immich-pkg
+rm -rf screensaver.immich-pkg
+```
 
-1. Go to **Add-ons** > **My add-ons** > **Picture add-ons** > **Immich**
-2. Select **Configure**
-3. Enter your settings:
+### Step 4: Install in Kodi
 
-### Required Settings
+1. Go to **Add-ons** → **Install from zip file**
+2. Navigate to the ZIP file and select it
+3. Repeat for both addons if desired
 
-| Setting | Description |
-|---------|-------------|
-| **Immich Server URL** | The full URL to your Immich server (e.g., `https://immich.example.com`) |
-| **API Key** | Your Immich API key |
+### Step 5: Install HEIF Decoder (for Apple Photos)
 
-### Getting Your API Key
+If you have HEIC photos from Apple devices:
+
+1. Go to **Add-ons** → **Install from repository**
+2. Select **All repositories** → **Image decoder**
+3. Install **HEIF image decoder**
+
+## Getting Your API Key
 
 1. Log in to your Immich web interface
-2. Click on your profile icon in the top right
-3. Go to **Account Settings**
-4. Scroll down to **API Keys**
-5. Click **New API Key**
-6. Give it a name (e.g., "Kodi") and click **Create**
-7. Copy the generated key and paste it into the addon settings
+2. Click on your profile icon → **Account Settings**
+3. Scroll to **API Keys** → **New API Key**
+4. Name it (e.g., "Kodi") and click **Create**
+5. Copy the key to your `config.txt`
+
+### Recommended API Permissions
+
+For basic browsing, your API key needs:
+- `album.read` - Browse albums
+- `asset.read` - View photos/videos
+- `asset.download` - Download images for display
+- `person.read` - Browse by people
+- `sharedLink.read` - Access shared links
 
 ## Usage
 
-### Main Menu
+### Plugin
 
-When you open the addon, you'll see the following options:
+- Open the Immich addon from **Add-ons** → **Picture add-ons**
+- Browse albums, people, timeline, etc.
+- Click any photo to view full screen
+- Use **[Start Slideshow]** option in albums
 
-- **My Albums** - Browse albums you've created
-- **Shared Albums** - Browse albums shared with you
-- **Shared Links** - Access shared links you've created
-- **Favorites** - View your favorite photos and videos
-- **People** - Browse by recognized faces
-- **Timeline** - Browse photos by month
-- **Search** - Search your photo library
+### Screensaver
 
-### Viewing Photos
+1. Go to **Settings** → **Interface** → **Screensaver**
+2. Select **Immich Photos** as your screensaver
+3. Configure photo source and display options in screensaver settings
 
-- Navigate to any album or section
-- Select a photo to view it full screen
-- Photos open in Kodi's built-in image viewer
+#### Finding Album/People IDs
 
-### Playing Videos
+- **Album ID**: Open an album in Immich web, the ID is in the URL: `https://immich.example.com/albums/[ALBUM-ID-HERE]`
+- **Person ID**: Open a person's page in Immich web, the ID is in the URL: `https://immich.example.com/people/[PERSON-ID-HERE]`
 
-- Videos are marked in listings
-- Select a video to play it in Kodi's video player
-- All Kodi video controls work as expected
-
-### Slideshows
-
-- In any album, select **[Start Slideshow]** at the top
-- Or right-click any image and select **Start Slideshow from Here**
-- Slideshow interval can be configured in settings
+For multiple people, separate IDs with commas: `id1,id2,id3`
 
 ## Troubleshooting
 
 ### Cannot connect to server
-
-- Verify your server URL is correct and includes the protocol (http:// or https://)
+- Verify your server URL includes protocol (http:// or https://)
 - Ensure your Immich server is running and accessible
 - Check that your API key is valid
-- If using HTTPS, ensure the certificate is valid
 
-### No albums showing
+### HEIC images not displaying
+- Install the **HEIF image decoder** addon from Kodi's official repository
+- The addon will show a notification if it's missing
 
-- Verify your API key has the correct permissions
-- Check that you have albums created in Immich
-- Try refreshing the view
+### Images loading slowly
+- First-time image loads require downloading to cache
+- Subsequent views are faster (cached locally)
 
-### Images not loading
+### No albums/photos showing
+- Verify your API key has correct permissions
+- Check that you have content in Immich
 
-- Check your network connection
-- Verify the Immich server has the photos available
-- Large photos may take time to load
-
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
-plugin.image.immich/
-├── addon.xml              # Addon metadata
-├── default.py             # Main entry point
-├── LICENSE
-├── README.md
-└── resources/
-    ├── icon.png           # Addon icon (256x256)
-    ├── fanart.png         # Addon fanart
-    ├── settings.xml       # Settings definition
-    ├── language/
-    │   └── resource.language.en_gb/
-    │       └── strings.po # English translations
-    └── lib/
-        ├── __init__.py
-        ├── immich_client.py  # Immich API client
-        └── plugin.py         # Plugin UI logic
+Immich-shared-album-Kodi-plugin/
+├── plugin.image.immich/          # Main browsing plugin
+│   ├── addon.xml
+│   ├── default.py
+│   └── resources/
+│       ├── lib/
+│       │   ├── immich_client.py
+│       │   └── plugin.py
+│       └── settings.xml
+│
+└── screensaver.immich/           # Photo screensaver
+    ├── addon.xml
+    ├── entrypoint.py
+    └── resources/
+        ├── lib/
+        │   ├── immich_client.py
+        │   └── screensaver.py
+        ├── skins/default/1080i/
+        │   └── screensaver-immich.xml
+        └── settings.xml
 ```
 
-### Building
+## Contributing
 
-To create a distributable ZIP:
-
-```bash
-zip -r plugin.image.immich.zip . -x "*.git*" -x "*.pyc" -x "__pycache__/*"
-```
-
-### Contributing
-
-Contributions are welcome! Please:
+Contributions welcome! This is a work in progress.
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
 
-## API Reference
-
-This addon uses the [Immich API](https://immich.app/docs/api/). Key endpoints used:
-
-- `GET /api/albums` - List albums
-- `GET /api/albums/{id}` - Get album details
-- `GET /api/assets/{id}/thumbnail` - Get asset thumbnail
-- `GET /api/assets/{id}/original` - Get original asset
-- `GET /api/shared-links` - List shared links
-- `POST /api/search/smart` - Smart search
-
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file.
 
 ## Acknowledgments
 
-- [Immich](https://immich.app/) - The amazing self-hosted photo and video backup solution
-- [Kodi](https://kodi.tv/) - The open-source media center
-- The Immich and Kodi communities
+- [Immich](https://immich.app/) - Self-hosted photo/video backup
+- [Kodi](https://kodi.tv/) - Open-source media center
+- [screensaver.kaster](https://github.com/enen92/screensaver.kaster) - Screensaver reference
 
 ## Disclaimer
 
-This is an unofficial addon and is not affiliated with Immich or Kodi. Use at your own risk.
+Unofficial addon, not affiliated with Immich or Kodi. Use at your own risk.

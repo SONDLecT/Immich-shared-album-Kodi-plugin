@@ -1,0 +1,8 @@
+# Immich Screensaver Configuration
+# Copy this file to config.txt and fill in your details
+
+# Your Immich server URL (e.g., https://immich.example.com)
+server_url=
+
+# Your Immich API key (create one in Immich Account Settings → API Keys)
+api_key=

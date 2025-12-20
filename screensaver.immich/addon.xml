@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="screensaver.immich" name="Immich Photos" version="1.0.0" provider-name="Immich Kodi Community">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+        <import addon="script.module.requests" version="2.22.0"/>
+        <!-- Optional: HEIF decoder for Apple HEIC photos -->
+        <import addon="imagedecoder.heif" optional="true"/>
+    </requires>
+    <extension point="xbmc.ui.screensaver" library="entrypoint.py"/>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_GB">Display photos from your Immich server</summary>
+        <summary lang="en_US">Display photos from your Immich server</summary>
+        <description lang="en_GB">A beautiful screensaver that displays photos from your self-hosted Immich server. Choose to show random photos, specific albums, shared albums, or photos of specific people. Supports multiple person selection for family slideshows.</description>
+        <description lang="en_US">A beautiful screensaver that displays photos from your self-hosted Immich server. Choose to show random photos, specific albums, shared albums, or photos of specific people. Supports multiple person selection for family slideshows.</description>
+        <disclaimer lang="en_GB">Requires a running Immich server and valid API key.</disclaimer>
+        <disclaimer lang="en_US">Requires a running Immich server and valid API key.</disclaimer>
+        <language>en</language>
+        <platform>all</platform>
+        <license>MIT</license>
+        <website>https://github.com/SONDLecT/Immich-shared-album-Kodi-plugin</website>
+        <source>https://github.com/SONDLecT/Immich-shared-album-Kodi-plugin</source>
+        <news>v1.0.0 - Initial release</news>
+        <assets>
+            <icon>resources/icon.png</icon>
+            <fanart>resources/fanart.png</fanart>
+        </assets>
+    </extension>
+</addon>

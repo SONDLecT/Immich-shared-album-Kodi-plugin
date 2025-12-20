@@ -1,0 +1,1 @@
+# Immich Screensaver Library
