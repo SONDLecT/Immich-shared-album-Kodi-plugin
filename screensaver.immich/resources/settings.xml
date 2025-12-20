@@ -31,19 +31,47 @@
                     </constraints>
                     <control type="spinner" format="string"/>
                 </setting>
-                <setting id="album_id" type="string" label="Album ID" help="The ID of the album to show (visible in album URL)">
+
+                <!-- Album selection -->
+                <setting id="album_id" type="string" label="Selected Album" help="The album to show photos from">
                     <default></default>
                     <control type="edit" format="string"/>
                     <dependencies>
                         <dependency type="visible" setting="source_mode">1</dependency>
                     </dependencies>
                 </setting>
-                <setting id="people_ids" type="string" label="People IDs" help="Comma-separated list of person IDs to show photos of">
+                <setting id="select_album" type="action" label="Browse Albums..." help="Click to browse and select an album">
+                    <default/>
+                    <control type="button" format="action"/>
+                    <dependencies>
+                        <dependency type="visible" setting="source_mode">1</dependency>
+                    </dependencies>
+                    <data>RunScript(screensaver.immich, select_album)</data>
+                </setting>
+                <setting id="album_name" type="string" label="Album Name" visible="false">
+                    <default></default>
+                    <control type="label" format="string"/>
+                </setting>
+
+                <!-- People selection -->
+                <setting id="people_ids" type="string" label="Selected People" help="People to show photos of">
                     <default></default>
                     <control type="edit" format="string"/>
                     <dependencies>
                         <dependency type="visible" setting="source_mode">3</dependency>
                     </dependencies>
+                </setting>
+                <setting id="select_people" type="action" label="Browse People..." help="Click to browse and select people (multiple allowed)">
+                    <default/>
+                    <control type="button" format="action"/>
+                    <dependencies>
+                        <dependency type="visible" setting="source_mode">3</dependency>
+                    </dependencies>
+                    <data>RunScript(screensaver.immich, select_people)</data>
+                </setting>
+                <setting id="people_names" type="string" label="People Names" visible="false">
+                    <default></default>
+                    <control type="label" format="string"/>
                 </setting>
             </group>
         </category>

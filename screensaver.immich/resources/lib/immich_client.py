@@ -211,6 +211,24 @@ class ImmichClient:
         })
         return result if isinstance(result, list) else []
 
+    def get_all_people(self, with_hidden=False):
+        """
+        Get all recognized people.
+
+        Args:
+            with_hidden: Include hidden people
+
+        Returns:
+            List of person objects
+        """
+        result = self._request('GET', '/people', params={
+            'withHidden': str(with_hidden).lower(),
+            'size': 500
+        })
+        if result and 'people' in result:
+            return result['people']
+        return result if isinstance(result, list) else []
+
     def get_person_assets(self, person_id, count=200):
         """
         Get all assets featuring a specific person.
