@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings version="2">
+    <section id="connection">
+        <category id="server" label="Server Settings">
+            <group id="1">
+                <setting id="server_url" type="string" label="Immich Server URL" help="Full URL to your Immich server (e.g., https://immich.example.com)">
+                    <default></default>
+                    <control type="edit" format="string"/>
+                </setting>
+                <setting id="api_key" type="string" label="API Key" help="Your Immich API key (create one in Immich Account Settings)">
+                    <default></default>
+                    <control type="edit" format="string" option="hidden"/>
+                </setting>
+            </group>
+        </category>
+    </section>
+
+    <section id="display">
+        <category id="source" label="Photo Source">
+            <group id="2">
+                <setting id="source_mode" type="integer" label="Photo Source" help="Where to get photos from">
+                    <default>0</default>
+                    <constraints>
+                        <options>
+                            <option label="Random (All Photos)">0</option>
+                            <option label="Specific Album">1</option>
+                            <option label="All Shared Albums">2</option>
+                            <option label="Specific People">3</option>
+                            <option label="Favorites">4</option>
+                        </options>
+                    </constraints>
+                    <control type="spinner" format="string"/>
+                </setting>
+                <setting id="album_id" type="string" label="Album ID" help="The ID of the album to show (visible in album URL)">
+                    <default></default>
+                    <control type="edit" format="string"/>
+                    <dependencies>
+                        <dependency type="visible" setting="source_mode">1</dependency>
+                    </dependencies>
+                </setting>
+                <setting id="people_ids" type="string" label="People IDs" help="Comma-separated list of person IDs to show photos of">
+                    <default></default>
+                    <control type="edit" format="string"/>
+                    <dependencies>
+                        <dependency type="visible" setting="source_mode">3</dependency>
+                    </dependencies>
+                </setting>
+            </group>
+        </category>
+
+        <category id="appearance" label="Appearance">
+            <group id="3">
+                <setting id="display_time" type="integer" label="Display Time (seconds)" help="How long to show each photo">
+                    <default>10</default>
+                    <constraints>
+                        <minimum>3</minimum>
+                        <maximum>60</maximum>
+                        <step>1</step>
+                    </constraints>
+                    <control type="slider" format="integer"/>
+                </setting>
+                <setting id="show_info" type="boolean" label="Show Photo Info" help="Display filename, date, and location overlay">
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
+        </category>
+    </section>
+</settings>

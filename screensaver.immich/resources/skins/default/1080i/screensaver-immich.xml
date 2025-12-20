@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window type="window" id="1">
+    <defaultcontrol always="true">100</defaultcontrol>
+    <controls>
+        <!-- Background image - full screen -->
+        <control type="image" id="100">
+            <left>0</left>
+            <top>0</top>
+            <width>1920</width>
+            <height>1080</height>
+            <aspectratio>keep</aspectratio>
+            <fadetime>500</fadetime>
+        </control>
+
+        <!-- Semi-transparent overlay at bottom for text -->
+        <control type="image">
+            <left>0</left>
+            <top>900</top>
+            <width>1920</width>
+            <height>180</height>
+            <texture colordiffuse="AA000000">-</texture>
+        </control>
+
+        <!-- Filename label -->
+        <control type="label" id="101">
+            <left>40</left>
+            <top>920</top>
+            <width>1840</width>
+            <height>40</height>
+            <font>font_MainMenu</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <shadowcolor>FF000000</shadowcolor>
+            <label></label>
+        </control>
+
+        <!-- Date label -->
+        <control type="label" id="102">
+            <left>40</left>
+            <top>970</top>
+            <width>900</width>
+            <height>30</height>
+            <font>font13</font>
+            <textcolor>FFCCCCCC</textcolor>
+            <shadowcolor>FF000000</shadowcolor>
+            <label></label>
+        </control>
+
+        <!-- Location label -->
+        <control type="label" id="103">
+            <left>40</left>
+            <top>1010</top>
+            <width>1840</width>
+            <height>30</height>
+            <font>font13</font>
+            <textcolor>FFCCCCCC</textcolor>
+            <shadowcolor>FF000000</shadowcolor>
+            <label></label>
+        </control>
+    </controls>
+</window>

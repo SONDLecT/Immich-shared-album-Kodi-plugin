@@ -1,0 +1,54 @@
+# Kodi Media Center language file
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+msgctxt "#32001"
+msgid "Immich Server URL"
+msgstr ""
+
+msgctxt "#32002"
+msgid "API Key"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Photo Source"
+msgstr ""
+
+msgctxt "#32004"
+msgid "Random (All Photos)"
+msgstr ""
+
+msgctxt "#32005"
+msgid "Specific Album"
+msgstr ""
+
+msgctxt "#32006"
+msgid "All Shared Albums"
+msgstr ""
+
+msgctxt "#32007"
+msgid "Specific People"
+msgstr ""
+
+msgctxt "#32008"
+msgid "Favorites"
+msgstr ""
+
+msgctxt "#32009"
+msgid "Album ID"
+msgstr ""
+
+msgctxt "#32010"
+msgid "People IDs"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Display Time (seconds)"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Show Photo Info"
+msgstr ""
