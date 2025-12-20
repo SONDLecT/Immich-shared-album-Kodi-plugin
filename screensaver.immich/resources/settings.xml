@@ -1,97 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<settings version="2">
-    <section id="connection">
-        <category id="server" label="Server Settings">
-            <group id="1">
-                <setting id="server_url" type="string" label="Immich Server URL" help="Full URL to your Immich server (e.g., https://immich.example.com)">
-                    <default></default>
-                    <control type="edit" format="string"/>
-                </setting>
-                <setting id="api_key" type="string" label="API Key" help="Your Immich API key (create one in Immich Account Settings)">
-                    <default></default>
-                    <control type="edit" format="string" option="hidden"/>
-                </setting>
-            </group>
-        </category>
-    </section>
-
-    <section id="display">
-        <category id="source" label="Photo Source">
-            <group id="2">
-                <setting id="source_mode" type="integer" label="Photo Source" help="Where to get photos from">
-                    <default>0</default>
-                    <constraints>
-                        <options>
-                            <option label="Random (All Photos)">0</option>
-                            <option label="Specific Album">1</option>
-                            <option label="All Shared Albums">2</option>
-                            <option label="Specific People">3</option>
-                            <option label="Favorites">4</option>
-                        </options>
-                    </constraints>
-                    <control type="spinner" format="string"/>
-                </setting>
-
-                <!-- Album selection -->
-                <setting id="album_id" type="string" label="Selected Album" help="The album to show photos from">
-                    <default></default>
-                    <control type="edit" format="string"/>
-                    <dependencies>
-                        <dependency type="visible" setting="source_mode">1</dependency>
-                    </dependencies>
-                </setting>
-                <setting id="select_album" type="action" label="Browse Albums..." help="Click to browse and select an album">
-                    <default/>
-                    <control type="button" format="action"/>
-                    <dependencies>
-                        <dependency type="visible" setting="source_mode">1</dependency>
-                    </dependencies>
-                    <data>RunScript(screensaver.immich, select_album)</data>
-                </setting>
-                <setting id="album_name" type="string" label="Album Name" visible="false">
-                    <default></default>
-                    <control type="label" format="string"/>
-                </setting>
-
-                <!-- People selection -->
-                <setting id="people_ids" type="string" label="Selected People" help="People to show photos of">
-                    <default></default>
-                    <control type="edit" format="string"/>
-                    <dependencies>
-                        <dependency type="visible" setting="source_mode">3</dependency>
-                    </dependencies>
-                </setting>
-                <setting id="select_people" type="action" label="Browse People..." help="Click to browse and select people (multiple allowed)">
-                    <default/>
-                    <control type="button" format="action"/>
-                    <dependencies>
-                        <dependency type="visible" setting="source_mode">3</dependency>
-                    </dependencies>
-                    <data>RunScript(screensaver.immich, select_people)</data>
-                </setting>
-                <setting id="people_names" type="string" label="People Names" visible="false">
-                    <default></default>
-                    <control type="label" format="string"/>
-                </setting>
-            </group>
-        </category>
-
-        <category id="appearance" label="Appearance">
-            <group id="3">
-                <setting id="display_time" type="integer" label="Display Time (seconds)" help="How long to show each photo">
-                    <default>10</default>
-                    <constraints>
-                        <minimum>3</minimum>
-                        <maximum>60</maximum>
-                        <step>1</step>
-                    </constraints>
-                    <control type="slider" format="integer"/>
-                </setting>
-                <setting id="show_info" type="boolean" label="Show Photo Info" help="Display filename, date, and location overlay">
-                    <default>true</default>
-                    <control type="toggle"/>
-                </setting>
-            </group>
-        </category>
-    </section>
+<settings>
+    <category label="Server Settings">
+        <setting id="server_url" type="text" label="Immich Server URL" default=""/>
+        <setting id="api_key" type="text" label="API Key" option="hidden" default=""/>
+    </category>
+    <category label="Photo Source">
+        <setting id="source_mode" type="labelenum" label="Photo Source"
+            values="Random (All Photos)|Specific Album|All Shared Albums|Specific People|Favorites" default="0"/>
+        <setting id="album_id" type="text" label="Album ID" default=""
+            visible="eq(-1,1)" enable="eq(-1,1)"/>
+        <setting id="people_ids" type="text" label="People IDs (comma-separated)" default=""
+            visible="eq(-2,3)" enable="eq(-2,3)"/>
+    </category>
+    <category label="Appearance">
+        <setting id="display_time" type="slider" label="Display Time (seconds)" default="10" range="3,1,60"/>
+        <setting id="show_info" type="bool" label="Show Photo Info" default="true"/>
+    </category>
 </settings>
