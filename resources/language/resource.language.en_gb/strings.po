@@ -70,6 +70,52 @@ msgctxt "#30017"
 msgid "{0:d} seconds"
 msgstr ""
 
+msgctxt "#30018"
+msgid "Items Per Page"
+msgstr ""
+
+msgctxt "#30019"
+msgid "Number of items to load at once in listings"
+msgstr ""
+
+# Settings - Cache
+msgctxt "#30020"
+msgid "Cache"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Clear Image Cache"
+msgstr ""
+
+msgctxt "#30022"
+msgid "Delete all cached images and thumbnails"
+msgstr ""
+
+msgctxt "#30023"
+msgid "Cache Size"
+msgstr ""
+
+# Settings - Other
+msgctxt "#30030"
+msgid "Other"
+msgstr ""
+
+msgctxt "#30031"
+msgid "Show HEIF Decoder Warning"
+msgstr ""
+
+msgctxt "#30032"
+msgid "Show notification when HEIF decoder addon is not installed (needed for Apple HEIC photos)"
+msgstr ""
+
+msgctxt "#30033"
+msgid "Show Loading Notifications"
+msgstr ""
+
+msgctxt "#30034"
+msgid "Show notifications when loading albums and images"
+msgstr ""
+
 # Main Menu
 msgctxt "#30100"
 msgid "My Albums"

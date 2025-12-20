@@ -27,6 +27,7 @@
             </group>
         </category>
     </section>
+
     <section id="display">
         <category id="display_settings" label="30010">
             <group id="image_settings">
@@ -44,7 +45,7 @@
                     </control>
                 </setting>
                 <setting id="slideshow_interval" type="integer" label="30015" help="30016">
-                    <level>1</level>
+                    <level>0</level>
                     <default>5</default>
                     <constraints>
                         <minimum>1</minimum>
@@ -55,6 +56,49 @@
                         <heading>30015</heading>
                         <formatlabel>30017</formatlabel>
                     </control>
+                </setting>
+                <setting id="items_per_page" type="integer" label="30018" help="30019">
+                    <level>1</level>
+                    <default>50</default>
+                    <constraints>
+                        <options>
+                            <option label="25">25</option>
+                            <option label="50">50</option>
+                            <option label="100">100</option>
+                            <option label="200">200</option>
+                        </options>
+                    </constraints>
+                    <control type="list" format="integer">
+                        <heading>30018</heading>
+                    </control>
+                </setting>
+            </group>
+        </category>
+    </section>
+
+    <section id="advanced">
+        <category id="cache_settings" label="30020">
+            <group id="cache_group">
+                <setting id="clear_cache" type="action" label="30021" help="30022">
+                    <level>0</level>
+                    <default/>
+                    <control type="button" format="action"/>
+                    <data>RunScript(plugin.image.immich, clear_cache)</data>
+                </setting>
+            </group>
+        </category>
+
+        <category id="other_settings" label="30030">
+            <group id="notifications_group">
+                <setting id="show_heif_warning" type="boolean" label="30031" help="30032">
+                    <level>0</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
+                <setting id="show_loading_notifications" type="boolean" label="30033" help="30034">
+                    <level>1</level>
+                    <default>true</default>
+                    <control type="toggle"/>
                 </setting>
             </group>
         </category>
