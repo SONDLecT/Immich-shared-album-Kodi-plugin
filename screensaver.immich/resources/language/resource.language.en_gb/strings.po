@@ -57,7 +57,7 @@ msgid "Album ID"
 msgstr ""
 
 msgctxt "#32010"
-msgid "People IDs (comma-separated)"
+msgid "People IDs"
 msgstr ""
 
 # Display settings
@@ -67,4 +67,21 @@ msgstr ""
 
 msgctxt "#32012"
 msgid "Show Photo Info"
+msgstr ""
+
+# Browse buttons and display fields
+msgctxt "#32013"
+msgid "Browse Albums..."
+msgstr ""
+
+msgctxt "#32014"
+msgid "Selected Album"
+msgstr ""
+
+msgctxt "#32015"
+msgid "Browse People..."
+msgstr ""
+
+msgctxt "#32016"
+msgid "Selected People"
 msgstr ""

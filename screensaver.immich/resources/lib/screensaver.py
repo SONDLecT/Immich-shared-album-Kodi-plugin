@@ -4,6 +4,7 @@ Immich Screensaver - Main screensaver logic
 
 import os
 import random
+from datetime import datetime
 
 import xbmc
 import xbmcgui
@@ -28,10 +29,12 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
     """Immich photo screensaver for Kodi."""
 
     # Control IDs from XML
-    BACKGROUND_IMAGE = 100
-    IMAGE_LABEL = 101
+    IMAGE_CONTROL_1 = 100
+    IMAGE_CONTROL_2 = 200
+    INFO_OVERLAY = 300
     DATE_LABEL = 102
     LOCATION_LABEL = 103
+    DESCRIPTION_LABEL = 101
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -40,19 +43,19 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         self.is_active = True
         self.exit_monitor = None
         self.client = None
+        self.current_image_control = 1  # Toggle between 1 and 2 for crossfade
 
     def onInit(self):
         """Called when the screensaver window is initialized."""
         # Set up exit monitor
         self.exit_monitor = ExitMonitor(self._exit_callback)
 
+        # Load config file first and apply to settings if needed
+        self._apply_config_file()
+
         # Load settings
         server_url = self.addon.getSetting('server_url')
         api_key = self.addon.getSetting('api_key')
-
-        # Check for config file if settings are empty
-        if not server_url or not api_key:
-            server_url, api_key = self._load_config_file()
 
         if not server_url or not api_key:
             self._show_error("Please configure Immich server settings")
@@ -84,6 +87,13 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
         show_info = self.addon.getSetting('show_info') == 'true'
 
+        # Hide/show info overlay
+        try:
+            overlay = self.getControl(self.INFO_OVERLAY)
+            overlay.setVisible(show_info)
+        except RuntimeError:
+            pass
+
         # Main screensaver loop
         while self.is_active and not self.exit_monitor.abortRequested():
             if not self.images:
@@ -100,8 +110,8 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             if not image_path:
                 continue
 
-            # Update display
-            self._display_image(image_path, image_data, show_info)
+            # Update display with crossfade
+            self._display_image_crossfade(image_path, image_data, show_info)
 
             # Wait for next image
             if self.exit_monitor.waitForAbort(display_time):
@@ -109,34 +119,33 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
         self.close()
 
-    def _load_config_file(self):
-        """Load configuration from config.txt file."""
+    def _apply_config_file(self):
+        """Load configuration from config.txt and apply to addon settings."""
         addon_path = self.addon.getAddonInfo('path')
         config_path = os.path.join(addon_path, 'config.txt')
 
         if not os.path.exists(config_path):
-            return None, None
-
-        server_url = None
-        api_key = None
+            return
 
         try:
             with open(config_path, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    if line.startswith('#') or '=' not in line:
+                    if line.startswith('#') or not line or '=' not in line:
                         continue
                     key, value = line.split('=', 1)
                     key = key.strip()
                     value = value.strip()
+
+                    # Apply to addon settings if current setting is empty
                     if key == 'server_url':
-                        server_url = value
+                        if not self.addon.getSetting('server_url'):
+                            self.addon.setSetting('server_url', value)
                     elif key == 'api_key':
-                        api_key = value
+                        if not self.addon.getSetting('api_key'):
+                            self.addon.setSetting('api_key', value)
         except Exception as e:
             xbmc.log(f"[screensaver.immich] Error reading config: {e}", xbmc.LOGERROR)
-
-        return server_url, api_key
 
     def _load_images(self):
         """Load images based on current settings."""
@@ -173,7 +182,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
     def _load_random_images(self):
         """Load random images from the library."""
-        # Use search to get random images
         result = self.client.search_random(count=100)
         if result:
             self.images = [img for img in result if img.get('type') == 'IMAGE']
@@ -194,7 +202,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
     def _load_people_images(self, people_ids_str):
         """Load images featuring specific people."""
-        # people_ids is a comma-separated string
         people_ids = [p.strip() for p in people_ids_str.split(',') if p.strip()]
         for person_id in people_ids:
             assets = self.client.get_person_assets(person_id, count=50)
@@ -212,58 +219,109 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             return None
         return self.client.get_asset_original(asset_id)
 
-    def _display_image(self, image_path, image_data, show_info):
-        """Display an image on the screensaver."""
-        # Set background image
-        background = self.getControl(self.BACKGROUND_IMAGE)
-        background.setImage(image_path)
+    def _display_image_crossfade(self, image_path, image_data, show_info):
+        """Display an image with crossfade effect."""
+        # Determine which control to use for crossfade
+        if self.current_image_control == 1:
+            active_control_id = self.IMAGE_CONTROL_1
+            self.current_image_control = 2
+        else:
+            active_control_id = self.IMAGE_CONTROL_2
+            self.current_image_control = 1
+
+        try:
+            # Set image on the active control
+            control = self.getControl(active_control_id)
+            control.setImage(image_path)
+        except RuntimeError as e:
+            xbmc.log(f"[screensaver.immich] Error setting image: {e}", xbmc.LOGERROR)
 
         if show_info:
-            # Set image info labels
-            filename = image_data.get('originalFileName', '')
-            created_at = image_data.get('fileCreatedAt', '')
-            exif = image_data.get('exifInfo', {}) or {}
+            self._update_info_labels(image_data)
 
-            # Format date
-            date_str = ''
-            if created_at:
-                date_str = created_at[:10]  # YYYY-MM-DD
+    def _update_info_labels(self, image_data):
+        """Update the info labels with photo metadata."""
+        # Get metadata
+        created_at = image_data.get('fileCreatedAt', '') or image_data.get('createdAt', '')
+        exif = image_data.get('exifInfo', {}) or {}
 
-            # Get location from EXIF
-            location_str = ''
-            city = exif.get('city', '')
-            state = exif.get('state', '')
-            country = exif.get('country', '')
-            location_parts = [p for p in [city, state, country] if p]
-            if location_parts:
-                location_str = ', '.join(location_parts)
+        # Format date nicely
+        date_str = self._format_date(created_at)
 
-            # Update labels (with error handling for missing controls)
-            try:
-                label = self.getControl(self.IMAGE_LABEL)
-                label.setLabel(filename)
-            except RuntimeError:
-                pass
+        # Get location from EXIF
+        location_str = self._format_location(exif)
 
-            try:
-                date_label = self.getControl(self.DATE_LABEL)
-                date_label.setLabel(date_str)
-            except RuntimeError:
-                pass
+        # Get camera/description info
+        description_str = self._format_description(image_data, exif)
 
-            try:
-                location_label = self.getControl(self.LOCATION_LABEL)
-                location_label.setLabel(location_str)
-            except RuntimeError:
-                pass
-        else:
-            # Hide info labels
-            try:
-                self.getControl(self.IMAGE_LABEL).setLabel('')
-                self.getControl(self.DATE_LABEL).setLabel('')
-                self.getControl(self.LOCATION_LABEL).setLabel('')
-            except RuntimeError:
-                pass
+        # Update labels
+        try:
+            self.getControl(self.DATE_LABEL).setLabel(date_str)
+        except RuntimeError:
+            pass
+
+        try:
+            self.getControl(self.LOCATION_LABEL).setLabel(location_str)
+        except RuntimeError:
+            pass
+
+        try:
+            self.getControl(self.DESCRIPTION_LABEL).setLabel(description_str)
+        except RuntimeError:
+            pass
+
+    def _format_date(self, date_string):
+        """Format date string nicely."""
+        if not date_string:
+            return ''
+
+        try:
+            # Parse ISO format date
+            if 'T' in date_string:
+                dt = datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+            else:
+                dt = datetime.strptime(date_string[:10], '%Y-%m-%d')
+
+            # Format nicely: "Saturday, December 23, 2025"
+            return dt.strftime('%A, %B %d, %Y')
+        except (ValueError, TypeError):
+            # Fallback to just the date portion
+            return date_string[:10] if len(date_string) >= 10 else date_string
+
+    def _format_location(self, exif):
+        """Format location from EXIF data."""
+        city = exif.get('city', '')
+        state = exif.get('state', '')
+        country = exif.get('country', '')
+
+        # Build location string
+        location_parts = [p for p in [city, state, country] if p]
+        if location_parts:
+            return ', '.join(location_parts)
+        return ''
+
+    def _format_description(self, image_data, exif):
+        """Format description/camera info."""
+        # Try to get description first
+        description = image_data.get('description', '')
+        if description:
+            return description
+
+        # Otherwise show camera info
+        make = exif.get('make', '')
+        model = exif.get('model', '')
+
+        if make and model:
+            # Clean up model name (often includes make)
+            if make.lower() in model.lower():
+                return model
+            return f"{make} {model}"
+        elif model:
+            return model
+        elif make:
+            return make
+
+        return ''
 
     def _show_error(self, message):
         """Show error notification."""

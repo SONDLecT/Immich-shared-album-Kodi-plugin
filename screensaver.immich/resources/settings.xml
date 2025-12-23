@@ -6,8 +6,14 @@
     </category>
     <category label="30001">
         <setting label="32003" type="enum" id="source_mode" default="0" lvalues="32004|32005|32006|32007|32008"/>
-        <setting label="32009" type="text" id="album_id" default="" enable="eq(-1,1)"/>
-        <setting label="32010" type="text" id="people_ids" default="" enable="eq(-2,3)"/>
+        <setting type="sep"/>
+        <setting label="32013" type="action" id="browse_album" action="RunScript(screensaver.immich,select_album)" enable="eq(-2,1)"/>
+        <setting label="32009" type="text" id="album_id" default="" enable="eq(-3,1)" visible="false"/>
+        <setting label="32014" type="text" id="album_name" default="" enable="false" visible="eq(-4,1)"/>
+        <setting type="sep"/>
+        <setting label="32015" type="action" id="browse_people" action="RunScript(screensaver.immich,select_people)" enable="eq(-6,3)"/>
+        <setting label="32010" type="text" id="people_ids" default="" enable="eq(-7,3)" visible="false"/>
+        <setting label="32016" type="text" id="people_names" default="" enable="false" visible="eq(-8,3)"/>
     </category>
     <category label="30002">
         <setting label="32011" type="slider" id="display_time" default="10" range="3,1,60" option="int"/>
