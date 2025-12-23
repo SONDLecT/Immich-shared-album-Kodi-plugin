@@ -1,10 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <settings>
-    <setting id="server_url" type="text" label="Immich Server URL" default=""/>
-    <setting id="api_key" type="text" label="API Key" option="hidden" default=""/>
-    <setting id="source_mode" type="enum" label="Photo Source" values="Random|Album|Shared Albums|People|Favorites" default="0"/>
-    <setting id="album_id" type="text" label="Album ID (if Album selected)" default=""/>
-    <setting id="people_ids" type="text" label="People IDs (comma-separated)" default=""/>
-    <setting id="display_time" type="number" label="Display Time (seconds)" default="10"/>
-    <setting id="show_info" type="bool" label="Show Photo Info" default="true"/>
+    <category label="30000">
+        <setting label="32001" type="text" id="server_url" default=""/>
+        <setting label="32002" type="text" id="api_key" option="hidden" default=""/>
+    </category>
+    <category label="30001">
+        <setting label="32003" type="enum" id="source_mode" default="0" lvalues="32004|32005|32006|32007|32008"/>
+        <setting label="32009" type="text" id="album_id" default="" enable="eq(-1,1)"/>
+        <setting label="32010" type="text" id="people_ids" default="" enable="eq(-2,3)"/>
+    </category>
+    <category label="30002">
+        <setting label="32011" type="slider" id="display_time" default="10" range="3,1,60" option="int"/>
+        <setting label="32012" type="bool" id="show_info" default="true"/>
+    </category>
 </settings>
