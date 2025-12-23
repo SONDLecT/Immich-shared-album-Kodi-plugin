@@ -227,52 +227,56 @@ class ImmichScreensaver(xbmcgui.WindowXML):
         """Display an image on the screen with optional pan/zoom effect."""
         try:
             control = self.getControl(self.IMAGE_CONTROL)
-            control.setImage(image_path, useCache=False)
 
             if ken_burns:
-                # Subtle pan/zoom during display
-                # Scale up slightly (8%) for more room to pan
-                scale = 1.08
-                new_width = int(1920 * scale)
-                new_height = int(1080 * scale)
+                # Use Kodi's native animation system for smooth pan/zoom
+                # Random direction for variety
+                direction = random.choice(['left', 'right', 'up', 'down', 'in', 'out'])
+                time_ms = display_time * 1000
 
-                # Random start and end positions within the extra space
-                max_offset_x = new_width - 1920
-                max_offset_y = new_height - 1080
+                # Build animation based on direction
+                if direction == 'left':
+                    # Zoom in slightly while panning left
+                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
+                    slide = f'effect=slide start=0,0 end=-80,0 time={time_ms} tween=sine easing=inout'
+                elif direction == 'right':
+                    # Zoom in slightly while panning right
+                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
+                    slide = f'effect=slide start=-80,0 end=0,0 time={time_ms} tween=sine easing=inout'
+                elif direction == 'up':
+                    # Zoom in slightly while panning up
+                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
+                    slide = f'effect=slide start=0,0 end=0,-50 time={time_ms} tween=sine easing=inout'
+                elif direction == 'down':
+                    # Zoom in slightly while panning down
+                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
+                    slide = f'effect=slide start=0,-50 end=0,0 time={time_ms} tween=sine easing=inout'
+                elif direction == 'in':
+                    # Slow zoom in
+                    anim = f'effect=zoom start=100 end=112 center=auto time={time_ms} tween=sine easing=inout'
+                    slide = None
+                else:  # out
+                    # Slow zoom out
+                    anim = f'effect=zoom start=112 end=100 center=auto time={time_ms} tween=sine easing=inout'
+                    slide = None
 
-                start_x = random.randint(0, max_offset_x)
-                start_y = random.randint(0, max_offset_y)
-                end_x = random.randint(0, max_offset_x)
-                end_y = random.randint(0, max_offset_y)
+                # Apply animations
+                animations = [('Conditional', anim + ' condition=true')]
+                if slide:
+                    animations.append(('Conditional', slide + ' condition=true'))
 
-                control.setWidth(new_width)
-                control.setHeight(new_height)
-                control.setPosition(-start_x, -start_y)
+                control.setAnimations(animations)
 
-                # Smooth animation at ~30fps
-                frame_time = 33  # milliseconds per frame (~30fps)
-                total_frames = (display_time * 1000) // frame_time
+            # Set the image (this triggers the animation)
+            control.setImage(image_path, useCache=False)
 
-                for frame in range(total_frames):
-                    if not self.is_active:
-                        break
+            # Wait for display time
+            if self.exit_monitor.waitForAbort(display_time):
+                return
 
-                    # Use easing for smooth motion
-                    progress = self._ease_in_out(frame / total_frames)
-                    current_x = int(start_x + (end_x - start_x) * progress)
-                    current_y = int(start_y + (end_y - start_y) * progress)
-
-                    control.setPosition(-current_x, -current_y)
-                    xbmc.sleep(frame_time)
-
-                # Reset to normal size for next image
-                control.setWidth(1920)
-                control.setHeight(1080)
-                control.setPosition(0, 0)
-            else:
-                # No pan/zoom - just wait
-                if self.exit_monitor.waitForAbort(display_time):
-                    return
+            # Clear animations for next image
+            if ken_burns:
+                control.setAnimations([])
 
         except RuntimeError as e:
             xbmc.log(f"[screensaver.immich] Display error: {e}", xbmc.LOGERROR)
