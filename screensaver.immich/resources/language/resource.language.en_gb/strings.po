@@ -112,19 +112,7 @@ msgctxt "#32021"
 msgid "Clear Cache"
 msgstr ""
 
-# Transition settings
+# Display effects
 msgctxt "#32022"
-msgid "Transition Effect"
-msgstr ""
-
-msgctxt "#32023"
-msgid "None"
-msgstr ""
-
-msgctxt "#32024"
-msgid "Crossfade"
-msgstr ""
-
-msgctxt "#32025"
-msgid "Ken Burns (Pan/Zoom)"
+msgid "Pan & Zoom Effect (Ken Burns)"
 msgstr ""

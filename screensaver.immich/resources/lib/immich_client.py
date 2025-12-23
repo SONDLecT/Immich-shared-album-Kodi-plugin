@@ -405,10 +405,30 @@ class ImmichClient:
         Returns:
             List of asset objects
         """
+        # Try the search/metadata endpoint first (more reliable for person search)
+        result = self._request('POST', '/search/metadata', json_data={
+            'personIds': [person_id],
+            'size': count,
+            'type': 'IMAGE'
+        })
+
+        if result and 'assets' in result:
+            items = result['assets'].get('items', [])
+            if items:
+                return items
+
+        # Fallback: try smart search
         result = self._request('POST', '/search/smart', json_data={
             'personIds': [person_id],
             'size': count
         })
+
         if result and 'assets' in result:
             return result['assets'].get('items', [])
+
+        # Last fallback: try the person's timeline
+        result = self._request('GET', f'/people/{person_id}/assets')
+        if result and isinstance(result, list):
+            return result[:count]
+
         return []

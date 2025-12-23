@@ -176,6 +176,7 @@ class ImmichScreensaver(xbmcgui.WindowXML):
             display_time = 10
 
         show_info = self.addon.getSetting('show_info') == 'true'
+        ken_burns = self.addon.getSetting('ken_burns') == 'true'
 
         # Configure info overlay visibility
         self._set_info_visibility(show_info)
@@ -185,7 +186,7 @@ class ImmichScreensaver(xbmcgui.WindowXML):
             self.preloader.preload(self.images[:5])
 
         # Main display loop
-        xbmc.log(f"[screensaver.immich] Starting with {len(self.images)} images", xbmc.LOGINFO)
+        xbmc.log(f"[screensaver.immich] Starting with {len(self.images)} images, ken_burns={ken_burns}", xbmc.LOGINFO)
 
         while self.is_active and not self.exit_monitor.abortRequested():
             if not self.images:
@@ -200,8 +201,8 @@ class ImmichScreensaver(xbmcgui.WindowXML):
                 xbmc.log(f"[screensaver.immich] Skipping invalid path: {image_path}", xbmc.LOGWARNING)
                 continue
 
-            # Display the image
-            self._display_image(image_path)
+            # Display the image with optional Ken Burns effect
+            self._display_image(image_path, ken_burns, display_time)
 
             # Update info labels
             if show_info:
@@ -212,17 +213,55 @@ class ImmichScreensaver(xbmcgui.WindowXML):
                 self.preloader.preload(self.images[:5])
                 self.preloader.clear(image_data.get('id'))
 
-            # Wait for display time
-            if self.exit_monitor.waitForAbort(display_time):
-                break
-
         self.close()
 
-    def _display_image(self, image_path):
-        """Display an image on the screen."""
+    def _display_image(self, image_path, ken_burns=False, display_time=10):
+        """Display an image on the screen with optional Ken Burns effect."""
         try:
             control = self.getControl(self.IMAGE_CONTROL)
             control.setImage(image_path, useCache=False)
+
+            if ken_burns:
+                # Ken Burns: subtle pan/zoom during display
+                # Scale up slightly (5%) and animate position
+                scale = 1.05
+                new_width = int(1920 * scale)
+                new_height = int(1080 * scale)
+
+                # Random start and end positions within the extra space
+                max_offset_x = new_width - 1920
+                max_offset_y = new_height - 1080
+
+                start_x = random.randint(0, max_offset_x)
+                start_y = random.randint(0, max_offset_y)
+                end_x = random.randint(0, max_offset_x)
+                end_y = random.randint(0, max_offset_y)
+
+                control.setWidth(new_width)
+                control.setHeight(new_height)
+
+                # Animate position over display time
+                steps = display_time * 10  # 10 updates per second
+                for i in range(steps):
+                    if not self.is_active:
+                        break
+
+                    progress = i / steps
+                    current_x = int(start_x + (end_x - start_x) * progress)
+                    current_y = int(start_y + (end_y - start_y) * progress)
+
+                    control.setPosition(-current_x, -current_y)
+                    xbmc.sleep(100)
+
+                # Reset to normal size for next image
+                control.setWidth(1920)
+                control.setHeight(1080)
+                control.setPosition(0, 0)
+            else:
+                # No Ken Burns - just wait
+                if self.exit_monitor.waitForAbort(display_time):
+                    return
+
         except RuntimeError as e:
             xbmc.log(f"[screensaver.immich] Display error: {e}", xbmc.LOGERROR)
 
@@ -288,9 +327,13 @@ class ImmichScreensaver(xbmcgui.WindowXML):
 
     def _load_people_images(self, people_ids_str):
         people_ids = [p.strip() for p in people_ids_str.split(',') if p.strip()]
+        xbmc.log(f"[screensaver.immich] Loading images for {len(people_ids)} people: {people_ids}", xbmc.LOGINFO)
         for person_id in people_ids:
             assets = self.client.get_person_assets(person_id, count=50)
-            self.images.extend([a for a in assets if a.get('type') == 'IMAGE'])
+            xbmc.log(f"[screensaver.immich] Person {person_id}: got {len(assets)} assets", xbmc.LOGINFO)
+            images = [a for a in assets if a.get('type') == 'IMAGE']
+            xbmc.log(f"[screensaver.immich] Person {person_id}: {len(images)} are images", xbmc.LOGINFO)
+            self.images.extend(images)
 
     def _load_favorites(self):
         assets = self.client.get_favorites(count=100)

@@ -14,6 +14,7 @@
     <category label="30002">
         <setting label="32011" type="slider" id="display_time" default="10" range="3,1,60" option="int"/>
         <setting label="32012" type="bool" id="show_info" default="true"/>
+        <setting label="32022" type="bool" id="ken_burns" default="true"/>
     </category>
     <category label="30003">
         <setting label="32019" type="bool" id="enable_cache" default="true"/>
