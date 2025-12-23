@@ -16,14 +16,60 @@
             <texture>colors/black.png</texture>
         </control>
 
-        <!-- Main photo display -->
+        <!-- Image control 1: Zoom in -->
         <control type="image" id="101">
+            <left>-50</left>
+            <top>-30</top>
+            <right>-50</right>
+            <bottom>-30</bottom>
+            <aspectratio align="center" aligny="center">keep</aspectratio>
+            <fadetime>1000</fadetime>
+            <animation effect="zoom" start="100" end="108" time="12000" tween="sine" easing="inout" condition="true"/>
+        </control>
+
+        <!-- Image control 2: Zoom out -->
+        <control type="image" id="102">
+            <left>-50</left>
+            <top>-30</top>
+            <right>-50</right>
+            <bottom>-30</bottom>
+            <aspectratio align="center" aligny="center">keep</aspectratio>
+            <fadetime>1000</fadetime>
+            <animation effect="zoom" start="108" end="100" time="12000" tween="sine" easing="inout" condition="true"/>
+        </control>
+
+        <!-- Image control 3: Pan left with zoom -->
+        <control type="image" id="103">
+            <left>-50</left>
+            <top>-30</top>
+            <right>-50</right>
+            <bottom>-30</bottom>
+            <aspectratio align="center" aligny="center">keep</aspectratio>
+            <fadetime>1000</fadetime>
+            <animation effect="zoom" start="100" end="106" time="12000" tween="sine" easing="inout" condition="true"/>
+            <animation effect="slide" start="40,0" end="-40,0" time="12000" tween="sine" easing="inout" condition="true"/>
+        </control>
+
+        <!-- Image control 4: Pan right with zoom -->
+        <control type="image" id="104">
+            <left>-50</left>
+            <top>-30</top>
+            <right>-50</right>
+            <bottom>-30</bottom>
+            <aspectratio align="center" aligny="center">keep</aspectratio>
+            <fadetime>1000</fadetime>
+            <animation effect="zoom" start="100" end="106" time="12000" tween="sine" easing="inout" condition="true"/>
+            <animation effect="slide" start="-40,0" end="40,0" time="12000" tween="sine" easing="inout" condition="true"/>
+        </control>
+
+        <!-- Image control 5: Static (no animation) -->
+        <control type="image" id="105">
             <left>0</left>
             <top>0</top>
             <right>0</right>
             <bottom>0</bottom>
             <aspectratio align="center" aligny="center">keep</aspectratio>
-            <fadetime>800</fadetime>
+            <fadetime>1000</fadetime>
         </control>
 
         <!-- Semi-transparent overlay at bottom for text -->

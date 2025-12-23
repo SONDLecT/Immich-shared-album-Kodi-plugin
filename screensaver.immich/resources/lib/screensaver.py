@@ -82,8 +82,9 @@ class ImagePreloader:
 class ImmichScreensaver(xbmcgui.WindowXML):
     """Immich photo screensaver for Kodi - fullscreen window."""
 
-    # Control IDs from XML
-    IMAGE_CONTROL = 101
+    # Control IDs from XML - multiple image controls with different animations
+    IMAGE_CONTROLS = [101, 102, 103, 104]  # zoom-in, zoom-out, pan-left, pan-right
+    IMAGE_CONTROL_STATIC = 105  # Used when pan/zoom is disabled (no animation)
     INFO_OVERLAY = 300
     DATE_LABEL = 201
     LOCATION_LABEL = 202
@@ -98,6 +99,7 @@ class ImmichScreensaver(xbmcgui.WindowXML):
         self.exit_monitor = None
         self.client = None
         self.preloader = None
+        self.last_control_id = None
 
     def _load_config(self):
         """Load server_url and api_key directly from config.txt."""
@@ -215,68 +217,33 @@ class ImmichScreensaver(xbmcgui.WindowXML):
 
         self.close()
 
-    def _ease_in_out(self, t):
-        """Smooth easing function for natural motion."""
-        # Ease-in-out cubic for smooth acceleration and deceleration
-        if t < 0.5:
-            return 4 * t * t * t
-        else:
-            return 1 - pow(-2 * t + 2, 3) / 2
-
     def _display_image(self, image_path, ken_burns=False, display_time=10):
         """Display an image on the screen with optional pan/zoom effect."""
         try:
-            control = self.getControl(self.IMAGE_CONTROL)
-
+            # Choose which image control to use
             if ken_burns:
-                # Use Kodi's native animation system for smooth pan/zoom
-                # Random direction for variety
-                direction = random.choice(['left', 'right', 'up', 'down', 'in', 'out'])
-                time_ms = display_time * 1000
+                # Randomly pick one of the animated controls
+                control_id = random.choice(self.IMAGE_CONTROLS)
+            else:
+                # Use the static control (first one, but without animation effect)
+                control_id = self.IMAGE_CONTROL_STATIC
 
-                # Build animation based on direction
-                if direction == 'left':
-                    # Zoom in slightly while panning left
-                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
-                    slide = f'effect=slide start=0,0 end=-80,0 time={time_ms} tween=sine easing=inout'
-                elif direction == 'right':
-                    # Zoom in slightly while panning right
-                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
-                    slide = f'effect=slide start=-80,0 end=0,0 time={time_ms} tween=sine easing=inout'
-                elif direction == 'up':
-                    # Zoom in slightly while panning up
-                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
-                    slide = f'effect=slide start=0,0 end=0,-50 time={time_ms} tween=sine easing=inout'
-                elif direction == 'down':
-                    # Zoom in slightly while panning down
-                    anim = f'effect=zoom start=100 end=108 center=auto time={time_ms} tween=sine easing=inout'
-                    slide = f'effect=slide start=0,-50 end=0,0 time={time_ms} tween=sine easing=inout'
-                elif direction == 'in':
-                    # Slow zoom in
-                    anim = f'effect=zoom start=100 end=112 center=auto time={time_ms} tween=sine easing=inout'
-                    slide = None
-                else:  # out
-                    # Slow zoom out
-                    anim = f'effect=zoom start=112 end=100 center=auto time={time_ms} tween=sine easing=inout'
-                    slide = None
+            # Clear previous image control if different
+            if self.last_control_id and self.last_control_id != control_id:
+                try:
+                    old_control = self.getControl(self.last_control_id)
+                    old_control.setImage('')
+                except RuntimeError:
+                    pass
 
-                # Apply animations
-                animations = [('Conditional', anim + ' condition=true')]
-                if slide:
-                    animations.append(('Conditional', slide + ' condition=true'))
-
-                control.setAnimations(animations)
-
-            # Set the image (this triggers the animation)
+            # Get the control and set the image
+            control = self.getControl(control_id)
             control.setImage(image_path, useCache=False)
+            self.last_control_id = control_id
 
             # Wait for display time
             if self.exit_monitor.waitForAbort(display_time):
                 return
-
-            # Clear animations for next image
-            if ken_burns:
-                control.setAnimations([])
 
         except RuntimeError as e:
             xbmc.log(f"[screensaver.immich] Display error: {e}", xbmc.LOGERROR)
