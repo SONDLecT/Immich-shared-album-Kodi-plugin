@@ -18,6 +18,10 @@ msgctxt "#30002"
 msgid "Display"
 msgstr ""
 
+msgctxt "#30003"
+msgid "Cache"
+msgstr ""
+
 # Server settings
 msgctxt "#32001"
 msgid "Immich Server URL"
@@ -57,7 +61,7 @@ msgid "Album ID"
 msgstr ""
 
 msgctxt "#32010"
-msgid "People IDs (comma-separated)"
+msgid "People IDs"
 msgstr ""
 
 # Display settings
@@ -67,4 +71,48 @@ msgstr ""
 
 msgctxt "#32012"
 msgid "Show Photo Info"
+msgstr ""
+
+# Browse buttons and display fields
+msgctxt "#32013"
+msgid "Browse Albums..."
+msgstr ""
+
+msgctxt "#32014"
+msgid "Selected Album"
+msgstr ""
+
+msgctxt "#32015"
+msgid "Browse People..."
+msgstr ""
+
+msgctxt "#32016"
+msgid "Selected People"
+msgstr ""
+
+# New source modes
+msgctxt "#32017"
+msgid "Recent Photos (Last 6 Months)"
+msgstr ""
+
+msgctxt "#32018"
+msgid "Memories (This Day in Past Years)"
+msgstr ""
+
+# Cache settings
+msgctxt "#32019"
+msgid "Enable Photo Caching"
+msgstr ""
+
+msgctxt "#32020"
+msgid "Pre-load Next Photos"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Clear Cache"
+msgstr ""
+
+# Display effects
+msgctxt "#32022"
+msgid "Subtle Pan & Zoom"
 msgstr ""

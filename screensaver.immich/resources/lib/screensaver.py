@@ -4,11 +4,12 @@ Immich Screensaver - Main screensaver logic
 
 import os
 import random
+import threading
+from datetime import datetime
 
 import xbmc
 import xbmcgui
 import xbmcaddon
-import xbmcvfs
 
 from resources.lib.immich_client import ImmichClient
 
@@ -24,51 +25,171 @@ class ExitMonitor(xbmc.Monitor):
         self.callback()
 
 
-class ImmichScreensaver(xbmcgui.WindowXMLDialog):
-    """Immich photo screensaver for Kodi."""
+class ImagePreloader:
+    """Background pre-loader for images."""
+
+    def __init__(self, client, count=3):
+        self.client = client
+        self.count = count
+        self.preloaded = {}
+        self.lock = threading.Lock()
+
+    def preload(self, images):
+        """Start pre-loading the next few images in background."""
+        to_preload = images[:self.count]
+
+        for image_data in to_preload:
+            asset_id = image_data.get('id')
+            if not asset_id:
+                continue
+
+            with self.lock:
+                if asset_id in self.preloaded:
+                    continue
+
+            thread = threading.Thread(
+                target=self._preload_image,
+                args=(image_data,),
+                daemon=True
+            )
+            thread.start()
+
+    def _preload_image(self, image_data):
+        """Download an image in background."""
+        asset_id = image_data.get('id')
+        if not asset_id:
+            return
+
+        try:
+            path = self.client.get_asset_original(asset_id)
+            if path:
+                with self.lock:
+                    self.preloaded[asset_id] = path
+        except Exception as e:
+            xbmc.log(f"[screensaver.immich] Preload failed: {e}", xbmc.LOGERROR)
+
+    def get_preloaded(self, asset_id):
+        """Get preloaded path if available."""
+        with self.lock:
+            return self.preloaded.get(asset_id)
+
+    def clear(self, asset_id):
+        """Remove from preloaded cache after use."""
+        with self.lock:
+            self.preloaded.pop(asset_id, None)
+
+
+class ImmichScreensaver(xbmcgui.WindowXML):
+    """Immich photo screensaver for Kodi - fullscreen window."""
 
     # Control IDs from XML
-    BACKGROUND_IMAGE = 100
-    IMAGE_LABEL = 101
-    DATE_LABEL = 102
-    LOCATION_LABEL = 103
+    IMAGE_CONTROL = 101
+    INFO_OVERLAY = 300
+    DATE_LABEL = 201
+    LOCATION_LABEL = 202
+    DESCRIPTION_LABEL = 203
+
+    # Effect list matching official screensaver.picture.slideshow format
+    # Each effect is a tuple: ('conditional', 'effect string with %i for time and %s for zoom')
+    # Format: slide + zoom combined for pan/zoom effect
+    EFFECTLIST = [
+        # Zoom in from center
+        [('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Zoom out from center
+        [('conditional', 'effect=zoom start=%s end=100 center=auto time=%i condition=true')],
+        # Pan left + zoom
+        [('conditional', 'effect=slide start=0,0 end=-150,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan right + zoom
+        [('conditional', 'effect=slide start=-150,0 end=0,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan up + zoom
+        [('conditional', 'effect=slide start=0,0 end=0,-100 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan down + zoom
+        [('conditional', 'effect=slide start=0,-100 end=0,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan diagonal top-left to bottom-right + zoom
+        [('conditional', 'effect=slide start=0,0 end=-100,-60 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan diagonal bottom-right to top-left + zoom
+        [('conditional', 'effect=slide start=-100,-60 end=0,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.addon = xbmcaddon.Addon()
+        self.addon_path = self.addon.getAddonInfo('path')
         self.images = []
         self.is_active = True
         self.exit_monitor = None
         self.client = None
+        self.preloader = None
+
+    def _load_config(self):
+        """Load server_url and api_key directly from config.txt."""
+        config_path = os.path.join(self.addon_path, 'config.txt')
+
+        if not os.path.exists(config_path):
+            xbmc.log(f"[screensaver.immich] No config.txt at {config_path}", xbmc.LOGWARNING)
+            return None, None
+
+        server_url = None
+        api_key = None
+
+        try:
+            with open(config_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        if key == 'server_url':
+                            server_url = value
+                        elif key == 'api_key':
+                            api_key = value
+
+            xbmc.log(f"[screensaver.immich] Loaded config - server: {server_url[:20] if server_url else 'None'}...", xbmc.LOGINFO)
+            return server_url, api_key
+        except Exception as e:
+            xbmc.log(f"[screensaver.immich] Failed to load config: {e}", xbmc.LOGERROR)
+            return None, None
 
     def onInit(self):
         """Called when the screensaver window is initialized."""
-        # Set up exit monitor
+        xbmc.log("[screensaver.immich] Screensaver starting", xbmc.LOGINFO)
         self.exit_monitor = ExitMonitor(self._exit_callback)
 
-        # Load settings
-        server_url = self.addon.getSetting('server_url')
-        api_key = self.addon.getSetting('api_key')
-
-        # Check for config file if settings are empty
-        if not server_url or not api_key:
-            server_url, api_key = self._load_config_file()
+        # Load config directly from file
+        server_url, api_key = self._load_config()
 
         if not server_url or not api_key:
-            self._show_error("Please configure Immich server settings")
+            self._show_error("Please ensure config.txt has server_url and api_key")
             self.close()
             return
+
+        xbmc.log(f"[screensaver.immich] Server: {server_url[:30]}...", xbmc.LOGINFO)
 
         # Initialize client
         self.client = ImmichClient(server_url, api_key)
 
-        # Test connection
         if not self.client.test_connection():
             self._show_error("Cannot connect to Immich server")
             self.close()
             return
 
-        # Load images based on settings
+        # Initialize preloader
+        enable_cache = self.addon.getSetting('enable_cache') != 'false'
+        if enable_cache:
+            try:
+                preload_count = int(self.addon.getSetting('preload_count') or '3')
+            except ValueError:
+                preload_count = 3
+            self.preloader = ImagePreloader(self.client, preload_count)
+
+        # Load images
         self._load_images()
 
         if not self.images:
@@ -83,109 +204,149 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             display_time = 10
 
         show_info = self.addon.getSetting('show_info') == 'true'
+        ken_burns = self.addon.getSetting('ken_burns') == 'true'
 
-        # Main screensaver loop
+        # Configure info overlay visibility
+        self._set_info_visibility(show_info)
+
+        # Start preloading
+        if self.preloader:
+            self.preloader.preload(self.images[:5])
+
+        # Main display loop
+        xbmc.log(f"[screensaver.immich] Starting with {len(self.images)} images, ken_burns={ken_burns}", xbmc.LOGINFO)
+
         while self.is_active and not self.exit_monitor.abortRequested():
             if not self.images:
                 self._load_images()
                 if not self.images:
                     break
 
-            # Pick random image
-            image_data = random.choice(self.images)
-            self.images.remove(image_data)
-
-            # Download and display image
+            image_data = self.images.pop(0)
             image_path = self._get_image_path(image_data)
-            if not image_path:
+
+            if not image_path or not os.path.exists(image_path):
+                xbmc.log(f"[screensaver.immich] Skipping invalid path: {image_path}", xbmc.LOGWARNING)
                 continue
 
-            # Update display
-            self._display_image(image_path, image_data, show_info)
+            # Update info labels FIRST so they show immediately with the image
+            if show_info:
+                self._update_info_labels(image_data)
 
-            # Wait for next image
-            if self.exit_monitor.waitForAbort(display_time):
-                break
+            # Display the image with optional pan/zoom effect
+            self._display_image(image_path, ken_burns, display_time)
+
+            # Preload next images
+            if self.preloader:
+                self.preloader.preload(self.images[:5])
+                self.preloader.clear(image_data.get('id'))
 
         self.close()
 
-    def _load_config_file(self):
-        """Load configuration from config.txt file."""
-        addon_path = self.addon.getAddonInfo('path')
-        config_path = os.path.join(addon_path, 'config.txt')
+    def _display_image(self, image_path, ken_burns=False, display_time=10):
+        """Display an image on the screen with optional pan/zoom effect.
 
-        if not os.path.exists(config_path):
-            return None, None
-
-        server_url = None
-        api_key = None
-
+        Uses the same setAnimations approach as official screensaver.picture.slideshow.
+        """
         try:
-            with open(config_path, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith('#') or '=' not in line:
-                        continue
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    if key == 'server_url':
-                        server_url = value
-                    elif key == 'api_key':
-                        api_key = value
-        except Exception as e:
-            xbmc.log(f"[screensaver.immich] Error reading config: {e}", xbmc.LOGERROR)
+            control = self.getControl(self.IMAGE_CONTROL)
 
-        return server_url, api_key
+            if ken_burns:
+                # Calculate animation time in milliseconds (matching official addon)
+                anim_time = display_time * 1000
+
+                # Calculate zoom level based on display time (longer = more zoom)
+                # Official addon uses 110-200 range based on time
+                zoom = min(110 + (display_time * 2), 150)
+
+                # Pick a random effect from the effect list
+                effect_template = random.choice(self.EFFECTLIST)
+
+                # Build the animation list by substituting time and zoom values
+                animations = []
+                for anim_type, effect_str in effect_template:
+                    # Count placeholders to determine what to substitute
+                    if '%s' in effect_str and '%i' in effect_str:
+                        # Has both zoom and time
+                        formatted = effect_str % (zoom, anim_time)
+                    elif '%i' in effect_str:
+                        # Only has time
+                        formatted = effect_str % anim_time
+                    else:
+                        formatted = effect_str
+                    animations.append((anim_type, formatted))
+
+                # Apply animations (this is exactly how the official addon does it)
+                control.setAnimations(animations)
+
+            # Set the image
+            control.setImage(image_path, useCache=False)
+
+            # Wait for display time
+            if self.exit_monitor.waitForAbort(display_time):
+                return
+
+            # Clear animations after display (reset for next image)
+            if ken_burns:
+                control.setAnimations([])
+
+        except RuntimeError as e:
+            xbmc.log(f"[screensaver.immich] Display error: {e}", xbmc.LOGERROR)
+
+    def _set_info_visibility(self, visible):
+        """Set visibility of info overlay and labels."""
+        try:
+            self.getControl(self.INFO_OVERLAY).setVisible(visible)
+        except RuntimeError:
+            pass
+
+        for label_id in [self.DATE_LABEL, self.LOCATION_LABEL, self.DESCRIPTION_LABEL]:
+            try:
+                self.getControl(label_id).setVisible(visible)
+            except RuntimeError:
+                pass
 
     def _load_images(self):
-        """Load images based on current settings."""
+        """Load images based on settings."""
         source_mode = self.addon.getSetting('source_mode') or '0'
         self.images = []
 
         if source_mode == '0':
-            # Random from all photos
             self._load_random_images()
         elif source_mode == '1':
-            # Specific album
             album_id = self.addon.getSetting('album_id')
             if album_id:
                 self._load_album_images(album_id)
             else:
                 self._load_random_images()
         elif source_mode == '2':
-            # Shared albums
             self._load_shared_album_images()
         elif source_mode == '3':
-            # Specific people
             people_ids = self.addon.getSetting('people_ids')
             if people_ids:
                 self._load_people_images(people_ids)
             else:
                 self._load_random_images()
         elif source_mode == '4':
-            # Favorites
             self._load_favorites()
+        elif source_mode == '5':
+            self._load_recent_images()
+        elif source_mode == '6':
+            self._load_memories()
 
-        # Shuffle the images
         random.shuffle(self.images)
-        xbmc.log(f"[screensaver.immich] Loaded {len(self.images)} images", xbmc.LOGINFO)
 
     def _load_random_images(self):
-        """Load random images from the library."""
-        # Use search to get random images
         result = self.client.search_random(count=100)
         if result:
             self.images = [img for img in result if img.get('type') == 'IMAGE']
 
     def _load_album_images(self, album_id):
-        """Load images from a specific album."""
         album = self.client.get_album(album_id)
         if album and 'assets' in album:
             self.images = [a for a in album['assets'] if a.get('type') == 'IMAGE']
 
     def _load_shared_album_images(self):
-        """Load images from all shared albums."""
         albums = self.client.get_all_albums(shared=True)
         for album in albums:
             album_data = self.client.get_album(album.get('id'))
@@ -193,92 +354,98 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
                 self.images.extend([a for a in album_data['assets'] if a.get('type') == 'IMAGE'])
 
     def _load_people_images(self, people_ids_str):
-        """Load images featuring specific people."""
-        # people_ids is a comma-separated string
         people_ids = [p.strip() for p in people_ids_str.split(',') if p.strip()]
+        xbmc.log(f"[screensaver.immich] Loading images for {len(people_ids)} people: {people_ids}", xbmc.LOGINFO)
         for person_id in people_ids:
             assets = self.client.get_person_assets(person_id, count=50)
-            self.images.extend([a for a in assets if a.get('type') == 'IMAGE'])
+            xbmc.log(f"[screensaver.immich] Person {person_id}: got {len(assets)} assets", xbmc.LOGINFO)
+            images = [a for a in assets if a.get('type') == 'IMAGE']
+            xbmc.log(f"[screensaver.immich] Person {person_id}: {len(images)} are images", xbmc.LOGINFO)
+            self.images.extend(images)
 
     def _load_favorites(self):
-        """Load favorite images."""
         assets = self.client.get_favorites(count=100)
         self.images = [a for a in assets if a.get('type') == 'IMAGE']
 
+    def _load_recent_images(self):
+        assets = self.client.search_recent(count=100, months=6)
+        self.images = [a for a in assets if a.get('type') == 'IMAGE']
+
+    def _load_memories(self):
+        assets = self.client.get_memories()
+        self.images = [a for a in assets if a.get('type') == 'IMAGE']
+        if not self.images:
+            self._load_recent_images()
+
     def _get_image_path(self, image_data):
-        """Download image and return local path."""
+        """Get image path, checking preloader first."""
         asset_id = image_data.get('id')
         if not asset_id:
             return None
+
+        if self.preloader:
+            path = self.preloader.get_preloaded(asset_id)
+            if path and os.path.exists(path):
+                return path
+
         return self.client.get_asset_original(asset_id)
 
-    def _display_image(self, image_path, image_data, show_info):
-        """Display an image on the screensaver."""
-        # Set background image
-        background = self.getControl(self.BACKGROUND_IMAGE)
-        background.setImage(image_path)
+    def _update_info_labels(self, image_data):
+        """Update info labels."""
+        created_at = image_data.get('fileCreatedAt', '') or image_data.get('createdAt', '')
+        exif = image_data.get('exifInfo', {}) or {}
 
-        if show_info:
-            # Set image info labels
-            filename = image_data.get('originalFileName', '')
-            created_at = image_data.get('fileCreatedAt', '')
-            exif = image_data.get('exifInfo', {}) or {}
+        try:
+            self.getControl(self.DATE_LABEL).setLabel(self._format_date(created_at))
+        except RuntimeError:
+            pass
 
-            # Format date
-            date_str = ''
-            if created_at:
-                date_str = created_at[:10]  # YYYY-MM-DD
+        try:
+            self.getControl(self.LOCATION_LABEL).setLabel(self._format_location(exif))
+        except RuntimeError:
+            pass
 
-            # Get location from EXIF
-            location_str = ''
-            city = exif.get('city', '')
-            state = exif.get('state', '')
-            country = exif.get('country', '')
-            location_parts = [p for p in [city, state, country] if p]
-            if location_parts:
-                location_str = ', '.join(location_parts)
+        try:
+            self.getControl(self.DESCRIPTION_LABEL).setLabel(self._format_description(image_data, exif))
+        except RuntimeError:
+            pass
 
-            # Update labels (with error handling for missing controls)
-            try:
-                label = self.getControl(self.IMAGE_LABEL)
-                label.setLabel(filename)
-            except RuntimeError:
-                pass
+    def _format_date(self, date_string):
+        if not date_string:
+            return ''
+        try:
+            if 'T' in date_string:
+                dt = datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+            else:
+                dt = datetime.strptime(date_string[:10], '%Y-%m-%d')
+            return dt.strftime('%A, %B %d, %Y')
+        except (ValueError, TypeError):
+            return date_string[:10] if len(date_string) >= 10 else date_string
 
-            try:
-                date_label = self.getControl(self.DATE_LABEL)
-                date_label.setLabel(date_str)
-            except RuntimeError:
-                pass
+    def _format_location(self, exif):
+        city = exif.get('city', '')
+        state = exif.get('state', '')
+        country = exif.get('country', '')
+        parts = [p for p in [city, state, country] if p]
+        return ', '.join(parts) if parts else ''
 
-            try:
-                location_label = self.getControl(self.LOCATION_LABEL)
-                location_label.setLabel(location_str)
-            except RuntimeError:
-                pass
-        else:
-            # Hide info labels
-            try:
-                self.getControl(self.IMAGE_LABEL).setLabel('')
-                self.getControl(self.DATE_LABEL).setLabel('')
-                self.getControl(self.LOCATION_LABEL).setLabel('')
-            except RuntimeError:
-                pass
+    def _format_description(self, image_data, exif):
+        desc = image_data.get('description', '')
+        if desc:
+            return desc
+        make = exif.get('make', '')
+        model = exif.get('model', '')
+        if make and model:
+            return model if make.lower() in model.lower() else f"{make} {model}"
+        return model or make or ''
 
     def _show_error(self, message):
-        """Show error notification."""
-        xbmcgui.Dialog().notification(
-            'Immich Screensaver',
-            message,
-            xbmcgui.NOTIFICATION_ERROR,
-            5000
-        )
+        xbmc.log(f"[screensaver.immich] Error: {message}", xbmc.LOGERROR)
+        xbmcgui.Dialog().notification('Immich Screensaver', message, xbmcgui.NOTIFICATION_ERROR, 5000)
 
     def _exit_callback(self):
-        """Called when screensaver should exit."""
         self.is_active = False
 
     def onAction(self, action):
-        """Handle user input to exit screensaver."""
         self.is_active = False
         self.close()

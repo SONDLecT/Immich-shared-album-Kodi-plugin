@@ -182,3 +182,20 @@ msgstr ""
 msgctxt "#30306"
 msgid "Album is empty"
 msgstr ""
+
+# Slideshow Settings
+msgctxt "#30040"
+msgid "Subtle Pan & Zoom"
+msgstr ""
+
+msgctxt "#30041"
+msgid "Enable gentle pan and zoom effects during slideshow"
+msgstr ""
+
+msgctxt "#30042"
+msgid "Show Info Overlay"
+msgstr ""
+
+msgctxt "#30043"
+msgid "Display photo date, location, and description during slideshow"
+msgstr ""
