@@ -114,5 +114,5 @@ msgstr ""
 
 # Display effects
 msgctxt "#32022"
-msgid "Pan & Zoom Effect (Ken Burns)"
+msgid "Subtle Pan & Zoom"
 msgstr ""
