@@ -201,12 +201,12 @@ class ImmichScreensaver(xbmcgui.WindowXML):
                 xbmc.log(f"[screensaver.immich] Skipping invalid path: {image_path}", xbmc.LOGWARNING)
                 continue
 
-            # Display the image with optional Ken Burns effect
-            self._display_image(image_path, ken_burns, display_time)
-
-            # Update info labels
+            # Update info labels FIRST so they show immediately with the image
             if show_info:
                 self._update_info_labels(image_data)
+
+            # Display the image with optional pan/zoom effect
+            self._display_image(image_path, ken_burns, display_time)
 
             # Preload next images
             if self.preloader:
@@ -215,16 +215,24 @@ class ImmichScreensaver(xbmcgui.WindowXML):
 
         self.close()
 
+    def _ease_in_out(self, t):
+        """Smooth easing function for natural motion."""
+        # Ease-in-out cubic for smooth acceleration and deceleration
+        if t < 0.5:
+            return 4 * t * t * t
+        else:
+            return 1 - pow(-2 * t + 2, 3) / 2
+
     def _display_image(self, image_path, ken_burns=False, display_time=10):
-        """Display an image on the screen with optional Ken Burns effect."""
+        """Display an image on the screen with optional pan/zoom effect."""
         try:
             control = self.getControl(self.IMAGE_CONTROL)
             control.setImage(image_path, useCache=False)
 
             if ken_burns:
-                # Ken Burns: subtle pan/zoom during display
-                # Scale up slightly (5%) and animate position
-                scale = 1.05
+                # Subtle pan/zoom during display
+                # Scale up slightly (8%) for more room to pan
+                scale = 1.08
                 new_width = int(1920 * scale)
                 new_height = int(1080 * scale)
 
@@ -239,26 +247,30 @@ class ImmichScreensaver(xbmcgui.WindowXML):
 
                 control.setWidth(new_width)
                 control.setHeight(new_height)
+                control.setPosition(-start_x, -start_y)
 
-                # Animate position over display time
-                steps = display_time * 10  # 10 updates per second
-                for i in range(steps):
+                # Smooth animation at ~30fps
+                frame_time = 33  # milliseconds per frame (~30fps)
+                total_frames = (display_time * 1000) // frame_time
+
+                for frame in range(total_frames):
                     if not self.is_active:
                         break
 
-                    progress = i / steps
+                    # Use easing for smooth motion
+                    progress = self._ease_in_out(frame / total_frames)
                     current_x = int(start_x + (end_x - start_x) * progress)
                     current_y = int(start_y + (end_y - start_y) * progress)
 
                     control.setPosition(-current_x, -current_y)
-                    xbmc.sleep(100)
+                    xbmc.sleep(frame_time)
 
                 # Reset to normal size for next image
                 control.setWidth(1920)
                 control.setHeight(1080)
                 control.setPosition(0, 0)
             else:
-                # No Ken Burns - just wait
+                # No pan/zoom - just wait
                 if self.exit_monitor.waitForAbort(display_time):
                     return
 
