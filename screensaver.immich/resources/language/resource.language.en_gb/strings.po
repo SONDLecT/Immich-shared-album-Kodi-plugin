@@ -5,6 +5,20 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: en\n"
 
+# Categories
+msgctxt "#30000"
+msgid "Server"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Photos"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Display"
+msgstr ""
+
+# Server settings
 msgctxt "#32001"
 msgid "Immich Server URL"
 msgstr ""
@@ -13,6 +27,7 @@ msgctxt "#32002"
 msgid "API Key"
 msgstr ""
 
+# Photo source settings
 msgctxt "#32003"
 msgid "Photo Source"
 msgstr ""
@@ -42,9 +57,10 @@ msgid "Album ID"
 msgstr ""
 
 msgctxt "#32010"
-msgid "People IDs"
+msgid "People IDs (comma-separated)"
 msgstr ""
 
+# Display settings
 msgctxt "#32011"
 msgid "Display Time (seconds)"
 msgstr ""

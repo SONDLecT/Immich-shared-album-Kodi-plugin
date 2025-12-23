@@ -6,7 +6,9 @@
         <!-- Optional: HEIF decoder for Apple HEIC photos -->
         <import addon="imagedecoder.heif" optional="true"/>
     </requires>
-    <extension point="xbmc.ui.screensaver" library="entrypoint.py"/>
+    <extension point="xbmc.python.script" library="entrypoint.py">
+        <provides>screensaver</provides>
+    </extension>
     <extension point="xbmc.addon.metadata">
         <summary lang="en_GB">Display photos from your Immich server</summary>
         <summary lang="en_US">Display photos from your Immich server</summary>

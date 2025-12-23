@@ -145,14 +145,10 @@ For basic browsing, your API key needs:
 
 1. Go to **Settings** → **Interface** → **Screensaver**
 2. Select **Immich Photos** as your screensaver
-3. Configure photo source and display options in screensaver settings
-
-#### Finding Album/People IDs
-
-- **Album ID**: Open an album in Immich web, the ID is in the URL: `https://immich.example.com/albums/[ALBUM-ID-HERE]`
-- **Person ID**: Open a person's page in Immich web, the ID is in the URL: `https://immich.example.com/people/[PERSON-ID-HERE]`
-
-For multiple people, separate IDs with commas: `id1,id2,id3`
+3. Configure photo source in screensaver settings:
+   - Choose source: Random, Specific Album, Shared Albums, Specific People, or Favorites
+   - Use **"Browse Albums..."** or **"Browse People..."** buttons to select
+   - Multiple people can be selected for family slideshows
 
 ## Troubleshooting
 

@@ -5,23 +5,67 @@ Browse your Immich photo library directly in Kodi
 
 import os
 import sys
+import shutil
 import urllib.parse
 
 import xbmc
 import xbmcgui
-import xbmcplugin
+import xbmcvfs
 import xbmcaddon
 
-from resources.lib.immich_client import ImmichClient
-from resources.lib.plugin import ImmichPlugin
-
-# Get addon handle and base URL
+# Get addon info (always available)
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_NAME = ADDON.getAddonInfo('name')
 ADDON_PATH = ADDON.getAddonInfo('path')
-HANDLE = int(sys.argv[1])
-BASE_URL = sys.argv[0]
+
+
+def clear_cache():
+    """Clear the image cache directory."""
+    cache_dir = os.path.join(
+        xbmcvfs.translatePath(ADDON.getAddonInfo('profile')),
+        'cache'
+    )
+
+    if os.path.exists(cache_dir):
+        try:
+            # Count files before deletion
+            file_count = len([f for f in os.listdir(cache_dir) if os.path.isfile(os.path.join(cache_dir, f))])
+
+            # Calculate size
+            total_size = sum(
+                os.path.getsize(os.path.join(cache_dir, f))
+                for f in os.listdir(cache_dir)
+                if os.path.isfile(os.path.join(cache_dir, f))
+            )
+            size_mb = total_size / (1024 * 1024)
+
+            # Delete cache directory
+            shutil.rmtree(cache_dir)
+            os.makedirs(cache_dir)
+
+            xbmcgui.Dialog().notification(
+                ADDON_NAME,
+                f'Cleared {file_count} files ({size_mb:.1f} MB)',
+                xbmcgui.NOTIFICATION_INFO,
+                3000
+            )
+            xbmc.log(f'[{ADDON_ID}] Cache cleared: {file_count} files, {size_mb:.1f} MB', xbmc.LOGINFO)
+        except Exception as e:
+            xbmcgui.Dialog().notification(
+                ADDON_NAME,
+                'Failed to clear cache',
+                xbmcgui.NOTIFICATION_ERROR,
+                3000
+            )
+            xbmc.log(f'[{ADDON_ID}] Failed to clear cache: {e}', xbmc.LOGERROR)
+    else:
+        xbmcgui.Dialog().notification(
+            ADDON_NAME,
+            'Cache is already empty',
+            xbmcgui.NOTIFICATION_INFO,
+            2000
+        )
 
 
 def get_params():
@@ -61,9 +105,6 @@ def load_config_file():
         if 'api_key' in config:
             ADDON.setSetting('api_key', config['api_key'])
 
-        # Optionally delete config file after import for security
-        # os.remove(config_path)
-
         xbmc.log(f'[{ADDON_ID}] Loaded settings from config.txt', xbmc.LOGINFO)
         return True
     except Exception as e:
@@ -71,8 +112,15 @@ def load_config_file():
         return False
 
 
-def main():
-    """Main entry point for the plugin."""
+def run_plugin():
+    """Run the main plugin UI."""
+    import xbmcplugin
+    from resources.lib.immich_client import ImmichClient
+    from resources.lib.plugin import ImmichPlugin
+
+    HANDLE = int(sys.argv[1])
+    BASE_URL = sys.argv[0]
+
     params = get_params()
     action = params.get('action', 'main_menu')
 
@@ -143,6 +191,17 @@ def main():
     else:
         xbmc.log(f'[{ADDON_ID}] Unknown action: {action}', xbmc.LOGWARNING)
         plugin.show_main_menu()
+
+
+def main():
+    """Main entry point - handles both plugin and script modes."""
+    # Check if running as a script (from settings action)
+    if len(sys.argv) > 1 and sys.argv[1] == 'clear_cache':
+        clear_cache()
+        return
+
+    # Otherwise run as plugin
+    run_plugin()
 
 
 if __name__ == '__main__':

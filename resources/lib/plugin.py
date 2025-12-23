@@ -34,6 +34,13 @@ class ImmichPlugin:
         """Check if HEIF image decoder is installed and warn if not."""
         if self._heif_warned:
             return
+
+        # Check if warning is enabled in settings
+        show_warning = self.addon.getSetting('show_heif_warning')
+        if show_warning == 'false':
+            self._heif_warned = True
+            return
+
         try:
             xbmcaddon.Addon('imagedecoder.heif')
         except RuntimeError:
