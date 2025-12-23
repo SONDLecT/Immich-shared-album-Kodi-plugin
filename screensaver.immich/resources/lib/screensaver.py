@@ -10,7 +10,6 @@ from datetime import datetime
 import xbmc
 import xbmcgui
 import xbmcaddon
-import xbmcvfs
 
 from resources.lib.immich_client import ImmichClient
 
@@ -93,30 +92,57 @@ class ImmichScreensaver(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.addon = xbmcaddon.Addon()
+        self.addon_path = self.addon.getAddonInfo('path')
         self.images = []
         self.is_active = True
         self.exit_monitor = None
         self.client = None
         self.preloader = None
 
+    def _load_config(self):
+        """Load server_url and api_key directly from config.txt."""
+        config_path = os.path.join(self.addon_path, 'config.txt')
+
+        if not os.path.exists(config_path):
+            xbmc.log(f"[screensaver.immich] No config.txt at {config_path}", xbmc.LOGWARNING)
+            return None, None
+
+        server_url = None
+        api_key = None
+
+        try:
+            with open(config_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        if key == 'server_url':
+                            server_url = value
+                        elif key == 'api_key':
+                            api_key = value
+
+            xbmc.log(f"[screensaver.immich] Loaded config - server: {server_url[:20] if server_url else 'None'}...", xbmc.LOGINFO)
+            return server_url, api_key
+        except Exception as e:
+            xbmc.log(f"[screensaver.immich] Failed to load config: {e}", xbmc.LOGERROR)
+            return None, None
+
     def onInit(self):
         """Called when the screensaver window is initialized."""
         xbmc.log("[screensaver.immich] Screensaver starting", xbmc.LOGINFO)
         self.exit_monitor = ExitMonitor(self._exit_callback)
 
-        # Apply config file settings (always overwrite)
-        self._apply_config_file()
-
-        # Load settings
-        server_url = self.addon.getSetting('server_url')
-        api_key = self.addon.getSetting('api_key')
-
-        xbmc.log(f"[screensaver.immich] Server: {server_url[:30] + '...' if server_url and len(server_url) > 30 else server_url}", xbmc.LOGINFO)
+        # Load config directly from file
+        server_url, api_key = self._load_config()
 
         if not server_url or not api_key:
-            self._show_error("Please configure Immich server settings")
+            self._show_error("Please ensure config.txt has server_url and api_key")
             self.close()
             return
+
+        xbmc.log(f"[screensaver.immich] Server: {server_url[:30]}...", xbmc.LOGINFO)
 
         # Initialize client
         self.client = ImmichClient(server_url, api_key)
@@ -212,55 +238,6 @@ class ImmichScreensaver(xbmcgui.WindowXML):
                 self.getControl(label_id).setVisible(visible)
             except RuntimeError:
                 pass
-
-    def _apply_config_file(self):
-        """Load config from config.txt and ALWAYS apply to settings."""
-        # Check multiple locations for config.txt
-        addon_path = self.addon.getAddonInfo('path')
-        profile_path = xbmcvfs.translatePath(self.addon.getAddonInfo('profile'))
-
-        config_locations = [
-            os.path.join(addon_path, 'config.txt'),
-            os.path.join(profile_path, 'config.txt'),
-            '/storage/.kodi/addons/screensaver.immich/config.txt',
-            '/storage/.kodi/userdata/addon_data/screensaver.immich/config.txt',
-        ]
-
-        xbmc.log(f"[screensaver.immich] Looking for config.txt...", xbmc.LOGINFO)
-
-        config_path = None
-        for path in config_locations:
-            xbmc.log(f"[screensaver.immich] Checking: {path}", xbmc.LOGINFO)
-            if os.path.exists(path):
-                config_path = path
-                xbmc.log(f"[screensaver.immich] FOUND config at: {path}", xbmc.LOGINFO)
-                break
-
-        if not config_path:
-            xbmc.log("[screensaver.immich] No config.txt found", xbmc.LOGINFO)
-            return
-
-        try:
-            with open(config_path, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith('#') or not line or '=' not in line:
-                        continue
-
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-
-                    # ALWAYS set the value (overwrite existing)
-                    if key == 'server_url' and value:
-                        xbmc.log(f"[screensaver.immich] Setting server_url from config", xbmc.LOGINFO)
-                        self.addon.setSetting('server_url', value)
-                    elif key == 'api_key' and value:
-                        xbmc.log(f"[screensaver.immich] Setting api_key from config", xbmc.LOGINFO)
-                        self.addon.setSetting('api_key', value)
-
-        except Exception as e:
-            xbmc.log(f"[screensaver.immich] Error reading config: {e}", xbmc.LOGERROR)
 
     def _load_images(self):
         """Load images based on settings."""
