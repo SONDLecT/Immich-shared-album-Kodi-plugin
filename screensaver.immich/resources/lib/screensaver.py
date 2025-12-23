@@ -80,8 +80,8 @@ class ImagePreloader:
             self.preloaded.pop(asset_id, None)
 
 
-class ImmichScreensaver(xbmcgui.WindowXMLDialog):
-    """Immich photo screensaver for Kodi."""
+class ImmichScreensaver(xbmcgui.WindowXML):
+    """Immich photo screensaver for Kodi - fullscreen window."""
 
     # Control IDs from XML
     IMAGE_CONTROL = 101

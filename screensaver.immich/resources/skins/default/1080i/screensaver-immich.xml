@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<window type="window">
-    <defaultcontrol always="true">101</defaultcontrol>
+<window>
     <backgroundcolor>FF000000</backgroundcolor>
+    <coordinates>
+        <left>0</left>
+        <top>0</top>
+        <system>1</system>
+    </coordinates>
     <controls>
+        <!-- Full screen black background -->
+        <control type="image">
+            <left>0</left>
+            <top>0</top>
+            <right>0</right>
+            <bottom>0</bottom>
+            <texture>colors/black.png</texture>
+        </control>
+
         <!-- Main photo display -->
         <control type="image" id="101">
             <left>0</left>
             <top>0</top>
-            <width>1920</width>
-            <height>1080</height>
+            <right>0</right>
+            <bottom>0</bottom>
             <aspectratio align="center" aligny="center">keep</aspectratio>
             <fadetime>800</fadetime>
         </control>
@@ -17,8 +30,8 @@
         <control type="image" id="300">
             <left>0</left>
             <top>850</top>
-            <width>1920</width>
-            <height>230</height>
+            <right>0</right>
+            <bottom>0</bottom>
             <colordiffuse>AA000000</colordiffuse>
         </control>
 
