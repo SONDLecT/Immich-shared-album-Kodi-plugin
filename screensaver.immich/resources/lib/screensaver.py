@@ -5,7 +5,6 @@ Immich Screensaver - Main screensaver logic
 import os
 import random
 import threading
-import time
 from datetime import datetime
 
 import xbmc
@@ -67,7 +66,6 @@ class ImagePreloader:
             if path:
                 with self.lock:
                     self.preloaded[asset_id] = path
-                xbmc.log(f"[screensaver.immich] Preloaded: {asset_id}", xbmc.LOGDEBUG)
         except Exception as e:
             xbmc.log(f"[screensaver.immich] Preload failed: {e}", xbmc.LOGERROR)
 
@@ -86,17 +84,11 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
     """Immich photo screensaver for Kodi."""
 
     # Control IDs from XML
-    IMAGE_CONTROL_1 = 101  # Primary image control
-    IMAGE_CONTROL_2 = 102  # Secondary image control for crossfade
+    IMAGE_CONTROL = 101
     INFO_OVERLAY = 300
     DATE_LABEL = 201
     LOCATION_LABEL = 202
     DESCRIPTION_LABEL = 203
-
-    # Transition modes
-    TRANSITION_NONE = '0'
-    TRANSITION_FADE = '1'
-    TRANSITION_KENBURNS = '2'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -106,22 +98,20 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         self.exit_monitor = None
         self.client = None
         self.preloader = None
-        self.current_control = 1  # Tracks which control is showing (1 or 2)
 
     def onInit(self):
         """Called when the screensaver window is initialized."""
-        xbmc.log("[screensaver.immich] onInit called", xbmc.LOGINFO)
+        xbmc.log("[screensaver.immich] Screensaver starting", xbmc.LOGINFO)
         self.exit_monitor = ExitMonitor(self._exit_callback)
 
-        # Apply config file settings
+        # Apply config file settings (always overwrite)
         self._apply_config_file()
 
         # Load settings
         server_url = self.addon.getSetting('server_url')
         api_key = self.addon.getSetting('api_key')
 
-        xbmc.log(f"[screensaver.immich] Server URL: {server_url[:30] if server_url else 'NOT SET'}...", xbmc.LOGINFO)
-        xbmc.log(f"[screensaver.immich] API Key: {'SET' if api_key else 'NOT SET'}", xbmc.LOGINFO)
+        xbmc.log(f"[screensaver.immich] Server: {server_url[:30] + '...' if server_url and len(server_url) > 30 else server_url}", xbmc.LOGINFO)
 
         if not server_url or not api_key:
             self._show_error("Please configure Immich server settings")
@@ -160,9 +150,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             display_time = 10
 
         show_info = self.addon.getSetting('show_info') == 'true'
-        transition_mode = self.addon.getSetting('transition_mode') or self.TRANSITION_FADE
-
-        xbmc.log(f"[screensaver.immich] Display time: {display_time}s, Show info: {show_info}, Transition: {transition_mode}", xbmc.LOGINFO)
 
         # Configure info overlay visibility
         self._set_info_visibility(show_info)
@@ -171,8 +158,8 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         if self.preloader:
             self.preloader.preload(self.images[:5])
 
-        # Main loop
-        xbmc.log(f"[screensaver.immich] Starting main loop with {len(self.images)} images", xbmc.LOGINFO)
+        # Main display loop
+        xbmc.log(f"[screensaver.immich] Starting with {len(self.images)} images", xbmc.LOGINFO)
 
         while self.is_active and not self.exit_monitor.abortRequested():
             if not self.images:
@@ -183,107 +170,95 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             image_data = self.images.pop(0)
             image_path = self._get_image_path(image_data)
 
-            if not image_path:
-                xbmc.log("[screensaver.immich] No image path returned, skipping", xbmc.LOGWARNING)
+            if not image_path or not os.path.exists(image_path):
+                xbmc.log(f"[screensaver.immich] Skipping invalid path: {image_path}", xbmc.LOGWARNING)
                 continue
 
-            if not os.path.exists(image_path):
-                xbmc.log(f"[screensaver.immich] Image file does not exist: {image_path}", xbmc.LOGERROR)
-                continue
+            # Display the image
+            self._display_image(image_path)
 
-            xbmc.log(f"[screensaver.immich] Displaying: {image_path}", xbmc.LOGINFO)
+            # Update info labels
+            if show_info:
+                self._update_info_labels(image_data)
 
             # Preload next images
             if self.preloader:
                 self.preloader.preload(self.images[:5])
-
-            # Display image with transition
-            self._display_image_with_transition(image_path, image_data, show_info, transition_mode, display_time)
-
-            # Clear from preloader
-            if self.preloader:
                 self.preloader.clear(image_data.get('id'))
 
-            # Wait (subtract transition time already spent)
-            remaining_time = max(1, display_time - 2)  # Account for transition time
-            if self.exit_monitor.waitForAbort(remaining_time):
+            # Wait for display time
+            if self.exit_monitor.waitForAbort(display_time):
                 break
 
         self.close()
 
+    def _display_image(self, image_path):
+        """Display an image on the screen."""
+        try:
+            control = self.getControl(self.IMAGE_CONTROL)
+            control.setImage(image_path, useCache=False)
+        except RuntimeError as e:
+            xbmc.log(f"[screensaver.immich] Display error: {e}", xbmc.LOGERROR)
+
     def _set_info_visibility(self, visible):
         """Set visibility of info overlay and labels."""
         try:
-            overlay = self.getControl(self.INFO_OVERLAY)
-            overlay.setVisible(visible)
+            self.getControl(self.INFO_OVERLAY).setVisible(visible)
         except RuntimeError:
             pass
 
         for label_id in [self.DATE_LABEL, self.LOCATION_LABEL, self.DESCRIPTION_LABEL]:
             try:
-                label = self.getControl(label_id)
-                label.setVisible(visible)
+                self.getControl(label_id).setVisible(visible)
             except RuntimeError:
                 pass
 
     def _apply_config_file(self):
-        """Load config from config.txt and apply to settings."""
+        """Load config from config.txt and ALWAYS apply to settings."""
         # Check multiple locations for config.txt
         addon_path = self.addon.getAddonInfo('path')
         profile_path = xbmcvfs.translatePath(self.addon.getAddonInfo('profile'))
 
-        xbmc.log(f"[screensaver.immich] Addon path: {addon_path}", xbmc.LOGINFO)
-        xbmc.log(f"[screensaver.immich] Profile path: {profile_path}", xbmc.LOGINFO)
-
         config_locations = [
             os.path.join(addon_path, 'config.txt'),
             os.path.join(profile_path, 'config.txt'),
+            '/storage/.kodi/addons/screensaver.immich/config.txt',
+            '/storage/.kodi/userdata/addon_data/screensaver.immich/config.txt',
         ]
+
+        xbmc.log(f"[screensaver.immich] Looking for config.txt...", xbmc.LOGINFO)
 
         config_path = None
         for path in config_locations:
-            xbmc.log(f"[screensaver.immich] Checking for config at: {path}", xbmc.LOGINFO)
+            xbmc.log(f"[screensaver.immich] Checking: {path}", xbmc.LOGINFO)
             if os.path.exists(path):
                 config_path = path
-                xbmc.log(f"[screensaver.immich] Found config at: {path}", xbmc.LOGINFO)
+                xbmc.log(f"[screensaver.immich] FOUND config at: {path}", xbmc.LOGINFO)
                 break
 
         if not config_path:
-            xbmc.log("[screensaver.immich] No config.txt found in any location", xbmc.LOGINFO)
+            xbmc.log("[screensaver.immich] No config.txt found", xbmc.LOGINFO)
             return
 
         try:
-            with open(config_path, 'r') as f:
-                content = f.read()
-                xbmc.log(f"[screensaver.immich] Config file content length: {len(content)}", xbmc.LOGINFO)
-
             with open(config_path, 'r') as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith('#') or not line or '=' not in line:
                         continue
+
                     key, value = line.split('=', 1)
                     key = key.strip()
                     value = value.strip()
 
-                    xbmc.log(f"[screensaver.immich] Config: {key}={value[:20] if value else 'EMPTY'}...", xbmc.LOGINFO)
-
+                    # ALWAYS set the value (overwrite existing)
                     if key == 'server_url' and value:
-                        current = self.addon.getSetting('server_url')
-                        xbmc.log(f"[screensaver.immich] Current server_url: '{current}'", xbmc.LOGINFO)
-                        if not current:
-                            self.addon.setSetting('server_url', value)
-                            xbmc.log(f"[screensaver.immich] Set server_url from config", xbmc.LOGINFO)
-                        else:
-                            xbmc.log(f"[screensaver.immich] server_url already set, not overwriting", xbmc.LOGINFO)
+                        xbmc.log(f"[screensaver.immich] Setting server_url from config", xbmc.LOGINFO)
+                        self.addon.setSetting('server_url', value)
                     elif key == 'api_key' and value:
-                        current = self.addon.getSetting('api_key')
-                        xbmc.log(f"[screensaver.immich] Current api_key: {'SET' if current else 'NOT SET'}", xbmc.LOGINFO)
-                        if not current:
-                            self.addon.setSetting('api_key', value)
-                            xbmc.log(f"[screensaver.immich] Set api_key from config", xbmc.LOGINFO)
-                        else:
-                            xbmc.log(f"[screensaver.immich] api_key already set, not overwriting", xbmc.LOGINFO)
+                        xbmc.log(f"[screensaver.immich] Setting api_key from config", xbmc.LOGINFO)
+                        self.addon.setSetting('api_key', value)
+
         except Exception as e:
             xbmc.log(f"[screensaver.immich] Error reading config: {e}", xbmc.LOGERROR)
 
@@ -291,8 +266,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         """Load images based on settings."""
         source_mode = self.addon.getSetting('source_mode') or '0'
         self.images = []
-
-        xbmc.log(f"[screensaver.immich] Loading images, source_mode={source_mode}", xbmc.LOGINFO)
 
         if source_mode == '0':
             self._load_random_images()
@@ -318,7 +291,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             self._load_memories()
 
         random.shuffle(self.images)
-        xbmc.log(f"[screensaver.immich] Loaded {len(self.images)} images", xbmc.LOGINFO)
 
     def _load_random_images(self):
         result = self.client.search_random(count=100)
@@ -351,28 +323,10 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         assets = self.client.search_recent(count=100, months=6)
         self.images = [a for a in assets if a.get('type') == 'IMAGE']
 
-        # Weight by recency
-        if self.images:
-            weighted = []
-            now = datetime.now()
-            for img in self.images:
-                created = img.get('fileCreatedAt', '')
-                weight = 1
-                if created:
-                    try:
-                        dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
-                        days = (now - dt.replace(tzinfo=None)).days
-                        weight = max(1, int(10 * (1 - days / 180)))
-                    except (ValueError, TypeError):
-                        pass
-                weighted.extend([img] * weight)
-            self.images = weighted
-
     def _load_memories(self):
         assets = self.client.get_memories()
         self.images = [a for a in assets if a.get('type') == 'IMAGE']
         if not self.images:
-            xbmc.log("[screensaver.immich] No memories, falling back to recent", xbmc.LOGINFO)
             self._load_recent_images()
 
     def _get_image_path(self, image_data):
@@ -384,127 +338,27 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         if self.preloader:
             path = self.preloader.get_preloaded(asset_id)
             if path and os.path.exists(path):
-                xbmc.log(f"[screensaver.immich] Using preloaded: {path}", xbmc.LOGDEBUG)
                 return path
 
-        path = self.client.get_asset_original(asset_id)
-        xbmc.log(f"[screensaver.immich] Downloaded: {path}", xbmc.LOGDEBUG)
-        return path
-
-    def _display_image_with_transition(self, image_path, image_data, show_info, transition_mode, display_time):
-        """Display image with the selected transition effect."""
-        if transition_mode == self.TRANSITION_NONE:
-            self._display_image_simple(image_path)
-        elif transition_mode == self.TRANSITION_FADE:
-            self._display_image_crossfade(image_path)
-        elif transition_mode == self.TRANSITION_KENBURNS:
-            self._display_image_kenburns(image_path, display_time)
-        else:
-            self._display_image_simple(image_path)
-
-        if show_info:
-            self._update_info_labels(image_data)
-
-    def _display_image_simple(self, image_path):
-        """Display image with no transition."""
-        try:
-            control = self.getControl(self.IMAGE_CONTROL_1)
-            control.setImage(image_path, useCache=False)
-            xbmc.log(f"[screensaver.immich] Set image on control {self.IMAGE_CONTROL_1}", xbmc.LOGINFO)
-        except RuntimeError as e:
-            xbmc.log(f"[screensaver.immich] Error setting image: {e}", xbmc.LOGERROR)
-
-    def _display_image_crossfade(self, image_path):
-        """Display image with crossfade transition."""
-        try:
-            # Get both controls
-            control1 = self.getControl(self.IMAGE_CONTROL_1)
-            control2 = self.getControl(self.IMAGE_CONTROL_2)
-
-            # Determine which control to fade in
-            if self.current_control == 1:
-                # Fade in on control 2
-                control2.setImage(image_path, useCache=False)
-
-                # Animate: fade out control 1, fade in control 2
-                for alpha in range(100, -1, -5):
-                    if not self.is_active:
-                        break
-                    control1.setColorDiffuse('FF{:02X}{:02X}{:02X}'.format(
-                        int(255 * alpha / 100), int(255 * alpha / 100), int(255 * alpha / 100)))
-                    control2.setColorDiffuse('FF{:02X}{:02X}{:02X}'.format(
-                        int(255 * (100 - alpha) / 100), int(255 * (100 - alpha) / 100), int(255 * (100 - alpha) / 100)))
-                    xbmc.sleep(30)
-
-                self.current_control = 2
-            else:
-                # Fade in on control 1
-                control1.setImage(image_path, useCache=False)
-
-                # Animate: fade out control 2, fade in control 1
-                for alpha in range(100, -1, -5):
-                    if not self.is_active:
-                        break
-                    control2.setColorDiffuse('FF{:02X}{:02X}{:02X}'.format(
-                        int(255 * alpha / 100), int(255 * alpha / 100), int(255 * alpha / 100)))
-                    control1.setColorDiffuse('FF{:02X}{:02X}{:02X}'.format(
-                        int(255 * (100 - alpha) / 100), int(255 * (100 - alpha) / 100), int(255 * (100 - alpha) / 100)))
-                    xbmc.sleep(30)
-
-                self.current_control = 1
-
-            xbmc.log(f"[screensaver.immich] Crossfade complete to control {self.current_control}", xbmc.LOGDEBUG)
-        except RuntimeError as e:
-            xbmc.log(f"[screensaver.immich] Error in crossfade: {e}", xbmc.LOGERROR)
-            # Fallback to simple
-            self._display_image_simple(image_path)
-
-    def _display_image_kenburns(self, image_path, display_time):
-        """Display image with Ken Burns (pan/zoom) effect."""
-        try:
-            control = self.getControl(self.IMAGE_CONTROL_1)
-            control.setImage(image_path, useCache=False)
-
-            # Random start and end positions for pan effect
-            start_zoom = random.uniform(1.0, 1.1)
-            end_zoom = random.uniform(1.0, 1.15)
-
-            # Random pan direction
-            start_x = random.randint(-50, 50)
-            start_y = random.randint(-30, 30)
-            end_x = random.randint(-50, 50)
-            end_y = random.randint(-30, 30)
-
-            # Note: Kodi's Python API doesn't support direct zoom/pan animation
-            # The Ken Burns effect requires XML animations or a different approach
-            # For now, just set the image and let CSS handle it if available
-            xbmc.log(f"[screensaver.immich] Ken Burns display on control {self.IMAGE_CONTROL_1}", xbmc.LOGINFO)
-
-        except RuntimeError as e:
-            xbmc.log(f"[screensaver.immich] Error in Ken Burns: {e}", xbmc.LOGERROR)
-            self._display_image_simple(image_path)
+        return self.client.get_asset_original(asset_id)
 
     def _update_info_labels(self, image_data):
         """Update info labels."""
         created_at = image_data.get('fileCreatedAt', '') or image_data.get('createdAt', '')
         exif = image_data.get('exifInfo', {}) or {}
 
-        date_str = self._format_date(created_at)
-        location_str = self._format_location(exif)
-        desc_str = self._format_description(image_data, exif)
-
         try:
-            self.getControl(self.DATE_LABEL).setLabel(date_str)
+            self.getControl(self.DATE_LABEL).setLabel(self._format_date(created_at))
         except RuntimeError:
             pass
 
         try:
-            self.getControl(self.LOCATION_LABEL).setLabel(location_str)
+            self.getControl(self.LOCATION_LABEL).setLabel(self._format_location(exif))
         except RuntimeError:
             pass
 
         try:
-            self.getControl(self.DESCRIPTION_LABEL).setLabel(desc_str)
+            self.getControl(self.DESCRIPTION_LABEL).setLabel(self._format_description(image_data, exif))
         except RuntimeError:
             pass
 
@@ -539,18 +393,11 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
     def _show_error(self, message):
         xbmc.log(f"[screensaver.immich] Error: {message}", xbmc.LOGERROR)
-        xbmcgui.Dialog().notification(
-            'Immich Screensaver',
-            message,
-            xbmcgui.NOTIFICATION_ERROR,
-            5000
-        )
+        xbmcgui.Dialog().notification('Immich Screensaver', message, xbmcgui.NOTIFICATION_ERROR, 5000)
 
     def _exit_callback(self):
-        xbmc.log("[screensaver.immich] Exit callback triggered", xbmc.LOGINFO)
         self.is_active = False
 
     def onAction(self, action):
-        xbmc.log(f"[screensaver.immich] Action received: {action.getId()}", xbmc.LOGDEBUG)
         self.is_active = False
         self.close()
