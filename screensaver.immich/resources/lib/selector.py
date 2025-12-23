@@ -166,6 +166,35 @@ def select_people():
             )
 
 
+def clear_cache():
+    """Clear the screensaver image cache."""
+    addon = xbmcaddon.Addon()
+    server_url = addon.getSetting('server_url')
+    api_key = addon.getSetting('api_key')
+
+    if not server_url or not api_key:
+        xbmcgui.Dialog().ok(
+            'Immich Screensaver',
+            'Please configure your Immich server settings first.'
+        )
+        return
+
+    client = ImmichClient(server_url, api_key)
+
+    # Get cache size before clearing
+    size_before = client.get_cache_size()
+
+    # Clear cache (files older than 0 days = all files)
+    client.clear_cache(max_age_days=0)
+
+    xbmcgui.Dialog().notification(
+        'Immich Screensaver',
+        f'Cleared {size_before:.1f} MB of cached images',
+        xbmcgui.NOTIFICATION_INFO,
+        3000
+    )
+
+
 def main():
     """Main entry point for selector script."""
     if len(sys.argv) < 2:
@@ -177,6 +206,8 @@ def main():
         select_album()
     elif action == 'select_people':
         select_people()
+    elif action == 'clear_cache':
+        clear_cache()
 
 
 if __name__ == '__main__':

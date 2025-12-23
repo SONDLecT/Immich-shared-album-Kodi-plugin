@@ -211,6 +211,171 @@ class ImmichClient:
         })
         return result if isinstance(result, list) else []
 
+    def search_recent(self, count=100, months=6):
+        """
+        Get recent assets with intelligent weighting.
+        Uses a time-decay approach: more recent photos are more likely to appear.
+
+        Args:
+            count: Number of assets to return
+            months: How many months back to look
+
+        Returns:
+            List of recent asset objects
+        """
+        from datetime import datetime, timedelta
+
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=months * 30)
+
+        # Use smart search with date filter
+        result = self._request('POST', '/search/smart', json_data={
+            'takenAfter': start_date.isoformat() + 'Z',
+            'takenBefore': end_date.isoformat() + 'Z',
+            'size': min(count * 2, 500),  # Get extra for weighting
+            'type': 'IMAGE'
+        })
+
+        assets = []
+        if result and 'assets' in result:
+            assets = result['assets'].get('items', [])
+
+        # If not enough results, also try random recent
+        if len(assets) < count:
+            random_result = self._request('POST', '/search/random', json_data={
+                'count': count
+            })
+            if isinstance(random_result, list):
+                # Filter to recent ones
+                for asset in random_result:
+                    taken = asset.get('fileCreatedAt', '')
+                    if taken:
+                        try:
+                            taken_date = datetime.fromisoformat(taken.replace('Z', '+00:00'))
+                            if taken_date.replace(tzinfo=None) >= start_date:
+                                assets.append(asset)
+                        except (ValueError, TypeError):
+                            pass
+
+        return assets[:count]
+
+    def get_memories(self):
+        """
+        Get "memories" - photos from this day in previous years.
+        This creates a nostalgic slideshow experience.
+
+        Returns:
+            List of asset objects from this day in previous years
+        """
+        from datetime import datetime, timedelta
+
+        today = datetime.now()
+        assets = []
+
+        # Search for photos from this day in previous years
+        for years_ago in range(1, 10):  # Look back up to 10 years
+            target_date = today.replace(year=today.year - years_ago)
+
+            # Search within a 3-day window
+            start = target_date - timedelta(days=1)
+            end = target_date + timedelta(days=1)
+
+            result = self._request('POST', '/search/smart', json_data={
+                'takenAfter': start.isoformat() + 'Z',
+                'takenBefore': end.isoformat() + 'Z',
+                'size': 20,
+                'type': 'IMAGE'
+            })
+
+            if result and 'assets' in result:
+                year_assets = result['assets'].get('items', [])
+                assets.extend(year_assets)
+
+        return assets
+
+    def get_asset_thumbnail(self, asset_id, size='preview'):
+        """
+        Download and cache an asset's thumbnail/preview.
+        Faster than full original for pre-loading.
+
+        Args:
+            asset_id: The asset's unique identifier
+            size: 'thumbnail' (small) or 'preview' (larger, default)
+
+        Returns:
+            Local file path to the cached thumbnail
+        """
+        url = f"{self.base_url}/assets/{asset_id}/thumbnail"
+        params = {'size': size}
+        cache_key = f"thumb_{size}_{asset_id}"
+
+        # Check cache first
+        filename = hashlib.md5(cache_key.encode()).hexdigest() + '.jpg'
+        cache_path = os.path.join(self.cache_dir, filename)
+
+        if os.path.exists(cache_path):
+            return cache_path
+
+        try:
+            response = requests.get(
+                url,
+                headers=self.headers,
+                params=params,
+                timeout=30,
+                stream=True
+            )
+            response.raise_for_status()
+
+            with open(cache_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            return cache_path
+        except requests.exceptions.RequestException as e:
+            xbmc.log(f"[screensaver.immich] Thumbnail download failed: {e}", xbmc.LOGERROR)
+            return None
+
+    def clear_cache(self, max_age_days=7):
+        """
+        Clear old cached files.
+
+        Args:
+            max_age_days: Delete files older than this many days
+        """
+        import time
+
+        if not os.path.exists(self.cache_dir):
+            return
+
+        now = time.time()
+        max_age_seconds = max_age_days * 24 * 60 * 60
+
+        for filename in os.listdir(self.cache_dir):
+            filepath = os.path.join(self.cache_dir, filename)
+            try:
+                if os.path.isfile(filepath):
+                    file_age = now - os.path.getmtime(filepath)
+                    if file_age > max_age_seconds:
+                        os.remove(filepath)
+            except OSError:
+                pass
+
+    def get_cache_size(self):
+        """
+        Get total size of cached files in MB.
+
+        Returns:
+            Cache size in megabytes
+        """
+        total_size = 0
+        if os.path.exists(self.cache_dir):
+            for filename in os.listdir(self.cache_dir):
+                filepath = os.path.join(self.cache_dir, filename)
+                if os.path.isfile(filepath):
+                    total_size += os.path.getsize(filepath)
+        return total_size / (1024 * 1024)
+
     def get_all_people(self, with_hidden=False):
         """
         Get all recognized people.

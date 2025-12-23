@@ -18,6 +18,10 @@ msgctxt "#30002"
 msgid "Display"
 msgstr ""
 
+msgctxt "#30003"
+msgid "Cache"
+msgstr ""
+
 # Server settings
 msgctxt "#32001"
 msgid "Immich Server URL"
@@ -84,4 +88,26 @@ msgstr ""
 
 msgctxt "#32016"
 msgid "Selected People"
+msgstr ""
+
+# New source modes
+msgctxt "#32017"
+msgid "Recent Photos (Last 6 Months)"
+msgstr ""
+
+msgctxt "#32018"
+msgid "Memories (This Day in Past Years)"
+msgstr ""
+
+# Cache settings
+msgctxt "#32019"
+msgid "Enable Photo Caching"
+msgstr ""
+
+msgctxt "#32020"
+msgid "Pre-load Next Photos"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Clear Cache"
 msgstr ""

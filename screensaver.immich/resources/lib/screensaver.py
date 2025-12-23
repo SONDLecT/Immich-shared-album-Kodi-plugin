@@ -4,6 +4,7 @@ Immich Screensaver - Main screensaver logic
 
 import os
 import random
+import threading
 from datetime import datetime
 
 import xbmc
@@ -25,6 +26,65 @@ class ExitMonitor(xbmc.Monitor):
         self.callback()
 
 
+class ImagePreloader:
+    """Background pre-loader for images."""
+
+    def __init__(self, client, count=3):
+        self.client = client
+        self.count = count
+        self.preloaded = {}  # asset_id -> local_path
+        self.lock = threading.Lock()
+        self.threads = []
+
+    def preload(self, images):
+        """Start pre-loading the next few images in background."""
+        # Only preload up to 'count' images
+        to_preload = images[:self.count]
+
+        for image_data in to_preload:
+            asset_id = image_data.get('id')
+            if not asset_id:
+                continue
+
+            # Skip if already preloaded
+            with self.lock:
+                if asset_id in self.preloaded:
+                    continue
+
+            # Start background download
+            thread = threading.Thread(
+                target=self._preload_image,
+                args=(image_data,),
+                daemon=True
+            )
+            thread.start()
+            self.threads.append(thread)
+
+    def _preload_image(self, image_data):
+        """Download an image in background."""
+        asset_id = image_data.get('id')
+        if not asset_id:
+            return
+
+        try:
+            path = self.client.get_asset_original(asset_id)
+            if path:
+                with self.lock:
+                    self.preloaded[asset_id] = path
+        except Exception as e:
+            xbmc.log(f"[screensaver.immich] Preload failed: {e}", xbmc.LOGERROR)
+
+    def get_preloaded(self, asset_id):
+        """Get preloaded path if available, else None."""
+        with self.lock:
+            return self.preloaded.get(asset_id)
+
+    def clear(self, asset_id):
+        """Remove from preloaded cache after use."""
+        with self.lock:
+            self.preloaded.pop(asset_id, None)
+
+
 class ImmichScreensaver(xbmcgui.WindowXMLDialog):
     """Immich photo screensaver for Kodi."""
 
@@ -43,7 +103,8 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         self.is_active = True
         self.exit_monitor = None
         self.client = None
-        self.current_image_control = 1  # Toggle between 1 and 2 for crossfade
+        self.preloader = None
+        self.current_image_control = 1
 
     def onInit(self):
         """Called when the screensaver window is initialized."""
@@ -71,6 +132,15 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             self.close()
             return
 
+        # Initialize preloader if caching enabled
+        enable_cache = self.addon.getSetting('enable_cache') != 'false'
+        if enable_cache:
+            try:
+                preload_count = int(self.addon.getSetting('preload_count') or '3')
+            except ValueError:
+                preload_count = 3
+            self.preloader = ImagePreloader(self.client, preload_count)
+
         # Load images based on settings
         self._load_images()
 
@@ -94,6 +164,10 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         except RuntimeError:
             pass
 
+        # Start preloading first few images
+        if self.preloader:
+            self.preloader.preload(self.images[:5])
+
         # Main screensaver loop
         while self.is_active and not self.exit_monitor.abortRequested():
             if not self.images:
@@ -101,17 +175,24 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
                 if not self.images:
                     break
 
-            # Pick random image
-            image_data = random.choice(self.images)
-            self.images.remove(image_data)
+            # Pick next image (from front of shuffled list)
+            image_data = self.images.pop(0)
 
-            # Download and display image
+            # Get image path (check preloader first)
             image_path = self._get_image_path(image_data)
             if not image_path:
                 continue
 
+            # Start preloading next images
+            if self.preloader:
+                self.preloader.preload(self.images[:5])
+
             # Update display with crossfade
             self._display_image_crossfade(image_path, image_data, show_info)
+
+            # Clear from preloader cache
+            if self.preloader:
+                self.preloader.clear(image_data.get('id'))
 
             # Wait for next image
             if self.exit_monitor.waitForAbort(display_time):
@@ -175,6 +256,12 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         elif source_mode == '4':
             # Favorites
             self._load_favorites()
+        elif source_mode == '5':
+            # Recent photos (last 6 months)
+            self._load_recent_images()
+        elif source_mode == '6':
+            # Memories (this day in past years)
+            self._load_memories()
 
         # Shuffle the images
         random.shuffle(self.images)
@@ -212,11 +299,57 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         assets = self.client.get_favorites(count=100)
         self.images = [a for a in assets if a.get('type') == 'IMAGE']
 
+    def _load_recent_images(self):
+        """Load recent images with intelligent weighting."""
+        assets = self.client.search_recent(count=100, months=6)
+        self.images = [a for a in assets if a.get('type') == 'IMAGE']
+
+        # Weight by recency - more recent photos appear more often
+        if self.images:
+            weighted_images = []
+            now = datetime.now()
+
+            for img in self.images:
+                created = img.get('fileCreatedAt', '')
+                weight = 1
+
+                if created:
+                    try:
+                        dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                        days_ago = (now - dt.replace(tzinfo=None)).days
+                        # More recent = higher weight (decay over 180 days)
+                        weight = max(1, int(10 * (1 - days_ago / 180)))
+                    except (ValueError, TypeError):
+                        pass
+
+                # Add image multiple times based on weight
+                weighted_images.extend([img] * weight)
+
+            self.images = weighted_images
+
+    def _load_memories(self):
+        """Load 'memories' - photos from this day in previous years."""
+        assets = self.client.get_memories()
+        self.images = [a for a in assets if a.get('type') == 'IMAGE']
+
+        # If no memories found, fall back to recent
+        if not self.images:
+            xbmc.log("[screensaver.immich] No memories found, falling back to recent", xbmc.LOGINFO)
+            self._load_recent_images()
+
     def _get_image_path(self, image_data):
-        """Download image and return local path."""
+        """Get image path, using preloader if available."""
         asset_id = image_data.get('id')
         if not asset_id:
             return None
+
+        # Check preloader first
+        if self.preloader:
+            preloaded_path = self.preloader.get_preloaded(asset_id)
+            if preloaded_path and os.path.exists(preloaded_path):
+                return preloaded_path
+
+        # Download if not preloaded
         return self.client.get_asset_original(asset_id)
 
     def _display_image_crossfade(self, image_path, image_data, show_info):
@@ -230,7 +363,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             self.current_image_control = 1
 
         try:
-            # Set image on the active control
             control = self.getControl(active_control_id)
             control.setImage(image_path)
         except RuntimeError as e:
@@ -241,20 +373,13 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
     def _update_info_labels(self, image_data):
         """Update the info labels with photo metadata."""
-        # Get metadata
         created_at = image_data.get('fileCreatedAt', '') or image_data.get('createdAt', '')
         exif = image_data.get('exifInfo', {}) or {}
 
-        # Format date nicely
         date_str = self._format_date(created_at)
-
-        # Get location from EXIF
         location_str = self._format_location(exif)
-
-        # Get camera/description info
         description_str = self._format_description(image_data, exif)
 
-        # Update labels
         try:
             self.getControl(self.DATE_LABEL).setLabel(date_str)
         except RuntimeError:
@@ -276,16 +401,13 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
             return ''
 
         try:
-            # Parse ISO format date
             if 'T' in date_string:
                 dt = datetime.fromisoformat(date_string.replace('Z', '+00:00'))
             else:
                 dt = datetime.strptime(date_string[:10], '%Y-%m-%d')
 
-            # Format nicely: "Saturday, December 23, 2025"
             return dt.strftime('%A, %B %d, %Y')
         except (ValueError, TypeError):
-            # Fallback to just the date portion
             return date_string[:10] if len(date_string) >= 10 else date_string
 
     def _format_location(self, exif):
@@ -294,7 +416,6 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
         state = exif.get('state', '')
         country = exif.get('country', '')
 
-        # Build location string
         location_parts = [p for p in [city, state, country] if p]
         if location_parts:
             return ', '.join(location_parts)
@@ -302,17 +423,14 @@ class ImmichScreensaver(xbmcgui.WindowXMLDialog):
 
     def _format_description(self, image_data, exif):
         """Format description/camera info."""
-        # Try to get description first
         description = image_data.get('description', '')
         if description:
             return description
 
-        # Otherwise show camera info
         make = exif.get('make', '')
         model = exif.get('model', '')
 
         if make and model:
-            # Clean up model name (often includes make)
             if make.lower() in model.lower():
                 return model
             return f"{make} {model}"
