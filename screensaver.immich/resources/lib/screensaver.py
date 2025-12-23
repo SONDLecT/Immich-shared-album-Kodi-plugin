@@ -82,13 +82,40 @@ class ImagePreloader:
 class ImmichScreensaver(xbmcgui.WindowXML):
     """Immich photo screensaver for Kodi - fullscreen window."""
 
-    # Control IDs from XML - multiple image controls with different animations
-    IMAGE_CONTROLS = [101, 102, 103, 104]  # zoom-in, zoom-out, pan-left, pan-right
-    IMAGE_CONTROL_STATIC = 105  # Used when pan/zoom is disabled (no animation)
+    # Control IDs from XML
+    IMAGE_CONTROL = 101
     INFO_OVERLAY = 300
     DATE_LABEL = 201
     LOCATION_LABEL = 202
     DESCRIPTION_LABEL = 203
+
+    # Effect list matching official screensaver.picture.slideshow format
+    # Each effect is a tuple: ('conditional', 'effect string with %i for time and %s for zoom')
+    # Format: slide + zoom combined for pan/zoom effect
+    EFFECTLIST = [
+        # Zoom in from center
+        [('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Zoom out from center
+        [('conditional', 'effect=zoom start=%s end=100 center=auto time=%i condition=true')],
+        # Pan left + zoom
+        [('conditional', 'effect=slide start=0,0 end=-150,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan right + zoom
+        [('conditional', 'effect=slide start=-150,0 end=0,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan up + zoom
+        [('conditional', 'effect=slide start=0,0 end=0,-100 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan down + zoom
+        [('conditional', 'effect=slide start=0,-100 end=0,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan diagonal top-left to bottom-right + zoom
+        [('conditional', 'effect=slide start=0,0 end=-100,-60 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+        # Pan diagonal bottom-right to top-left + zoom
+        [('conditional', 'effect=slide start=-100,-60 end=0,0 time=%i condition=true'),
+         ('conditional', 'effect=zoom start=100 end=%s center=auto time=%i condition=true')],
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -99,7 +126,6 @@ class ImmichScreensaver(xbmcgui.WindowXML):
         self.exit_monitor = None
         self.client = None
         self.preloader = None
-        self.last_control_id = None
 
     def _load_config(self):
         """Load server_url and api_key directly from config.txt."""
@@ -218,32 +244,51 @@ class ImmichScreensaver(xbmcgui.WindowXML):
         self.close()
 
     def _display_image(self, image_path, ken_burns=False, display_time=10):
-        """Display an image on the screen with optional pan/zoom effect."""
+        """Display an image on the screen with optional pan/zoom effect.
+
+        Uses the same setAnimations approach as official screensaver.picture.slideshow.
+        """
         try:
-            # Choose which image control to use
+            control = self.getControl(self.IMAGE_CONTROL)
+
             if ken_burns:
-                # Randomly pick one of the animated controls
-                control_id = random.choice(self.IMAGE_CONTROLS)
-            else:
-                # Use the static control (first one, but without animation effect)
-                control_id = self.IMAGE_CONTROL_STATIC
+                # Calculate animation time in milliseconds (matching official addon)
+                anim_time = display_time * 1000
 
-            # Clear previous image control if different
-            if self.last_control_id and self.last_control_id != control_id:
-                try:
-                    old_control = self.getControl(self.last_control_id)
-                    old_control.setImage('')
-                except RuntimeError:
-                    pass
+                # Calculate zoom level based on display time (longer = more zoom)
+                # Official addon uses 110-200 range based on time
+                zoom = min(110 + (display_time * 2), 150)
 
-            # Get the control and set the image
-            control = self.getControl(control_id)
+                # Pick a random effect from the effect list
+                effect_template = random.choice(self.EFFECTLIST)
+
+                # Build the animation list by substituting time and zoom values
+                animations = []
+                for anim_type, effect_str in effect_template:
+                    # Count placeholders to determine what to substitute
+                    if '%s' in effect_str and '%i' in effect_str:
+                        # Has both zoom and time
+                        formatted = effect_str % (zoom, anim_time)
+                    elif '%i' in effect_str:
+                        # Only has time
+                        formatted = effect_str % anim_time
+                    else:
+                        formatted = effect_str
+                    animations.append((anim_type, formatted))
+
+                # Apply animations (this is exactly how the official addon does it)
+                control.setAnimations(animations)
+
+            # Set the image
             control.setImage(image_path, useCache=False)
-            self.last_control_id = control_id
 
             # Wait for display time
             if self.exit_monitor.waitForAbort(display_time):
                 return
+
+            # Clear animations after display (reset for next image)
+            if ken_burns:
+                control.setAnimations([])
 
         except RuntimeError as e:
             xbmc.log(f"[screensaver.immich] Display error: {e}", xbmc.LOGERROR)
