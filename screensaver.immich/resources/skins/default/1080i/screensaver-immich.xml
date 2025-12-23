@@ -1,17 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window type="window">
     <defaultcontrol always="true">101</defaultcontrol>
+    <backgroundcolor>FF000000</backgroundcolor>
     <controls>
-        <!-- Full screen black background -->
-        <control type="image">
-            <left>0</left>
-            <top>0</top>
-            <width>1920</width>
-            <height>1080</height>
-            <texture colordiffuse="FF000000">-</texture>
-        </control>
-
-        <!-- Main photo display - single control, centered -->
+        <!-- Main photo display -->
         <control type="image" id="101">
             <left>0</left>
             <top>0</top>
@@ -21,13 +13,13 @@
             <fadetime>800</fadetime>
         </control>
 
-        <!-- Semi-transparent overlay at bottom for text readability -->
+        <!-- Semi-transparent overlay at bottom for text -->
         <control type="image" id="300">
             <left>0</left>
             <top>850</top>
             <width>1920</width>
             <height>230</height>
-            <texture colordiffuse="AA000000">-</texture>
+            <colordiffuse>AA000000</colordiffuse>
         </control>
 
         <!-- Date label -->
