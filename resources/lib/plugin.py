@@ -521,9 +521,8 @@ class ImmichPlugin:
             return
 
         assets = self.client.get_person_assets(person_id)
-        image_assets = [a for a in assets if a.get('type') == 'IMAGE']
 
-        if not image_assets:
+        if not assets:
             xbmcgui.Dialog().notification(
                 self.addon.getAddonInfo('name'),
                 'No images found for this person',
@@ -531,11 +530,11 @@ class ImmichPlugin:
             )
             return
 
-        # Download and show the first image (requires HEIF addon for Apple photos)
         self._check_heif_addon()
-        first_image_path = self.client.get_asset_original(image_assets[0].get('id'))
-        if first_image_path:
-            xbmc.executebuiltin(f'ShowPicture({first_image_path})')
+
+        # Use the new slideshow module
+        from resources.lib.slideshow import start_slideshow
+        start_slideshow(self.client, assets)
 
     def show_timeline(self):
         """Display timeline buckets."""
@@ -648,24 +647,13 @@ class ImmichPlugin:
             )
             return
 
-        # Get image URLs for the slideshow
         assets = album.get('assets', [])
-        image_assets = [a for a in assets if a.get('type') == 'IMAGE']
 
-        if not image_assets:
-            xbmcgui.Dialog().notification(
-                self.addon.getAddonInfo('name'),
-                'No images in album',
-                xbmcgui.NOTIFICATION_INFO
-            )
-            return
-
-        # Download and show the first image (requires HEIF addon for Apple photos)
-        # User can navigate with arrow keys in Kodi's picture viewer
         self._check_heif_addon()
-        first_image_path = self.client.get_asset_original(image_assets[0].get('id'))
-        if first_image_path:
-            xbmc.executebuiltin(f'ShowPicture({first_image_path})')
+
+        # Use the new slideshow module
+        from resources.lib.slideshow import start_slideshow
+        start_slideshow(self.client, assets)
 
     def search(self):
         """Show search dialog and display results."""

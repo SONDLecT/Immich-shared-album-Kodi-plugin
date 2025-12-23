@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <backgroundcolor>FF000000</backgroundcolor>
+    <coordinates>
+        <left>0</left>
+        <top>0</top>
+        <system>1</system>
+    </coordinates>
+    <controls>
+        <!-- Full screen black background -->
+        <control type="image">
+            <left>0</left>
+            <top>0</top>
+            <right>0</right>
+            <bottom>0</bottom>
+            <texture>colors/black.png</texture>
+        </control>
+
+        <!-- Main photo display - animations applied via Python setAnimations() -->
+        <control type="image" id="101">
+            <left>-50</left>
+            <top>-30</top>
+            <right>-50</right>
+            <bottom>-30</bottom>
+            <aspectratio align="center" aligny="center">keep</aspectratio>
+            <fadetime>1000</fadetime>
+        </control>
+
+        <!-- Semi-transparent overlay at bottom for text -->
+        <control type="image" id="300">
+            <left>0</left>
+            <top>850</top>
+            <right>0</right>
+            <bottom>0</bottom>
+            <colordiffuse>AA000000</colordiffuse>
+        </control>
+
+        <!-- Date label (includes position counter) -->
+        <control type="label" id="201">
+            <left>50</left>
+            <top>880</top>
+            <width>1820</width>
+            <height>50</height>
+            <font>font_MainMenu</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <shadowcolor>FF000000</shadowcolor>
+            <label></label>
+        </control>
+
+        <!-- Location label -->
+        <control type="label" id="202">
+            <left>50</left>
+            <top>940</top>
+            <width>1820</width>
+            <height>40</height>
+            <font>font13</font>
+            <textcolor>FFCCCCCC</textcolor>
+            <shadowcolor>FF000000</shadowcolor>
+            <label></label>
+        </control>
+
+        <!-- Description/camera label -->
+        <control type="label" id="203">
+            <left>50</left>
+            <top>990</top>
+            <width>1820</width>
+            <height>35</height>
+            <font>font12</font>
+            <textcolor>FF999999</textcolor>
+            <shadowcolor>FF000000</shadowcolor>
+            <label></label>
+        </control>
+
+        <!-- Navigation hint at top (fades out) -->
+        <control type="label" id="400">
+            <left>50</left>
+            <top>30</top>
+            <width>1820</width>
+            <height>30</height>
+            <font>font12</font>
+            <textcolor>88FFFFFF</textcolor>
+            <align>center</align>
+            <label>Left/Right: Navigate | Up: Toggle Info | Down: Toggle Effect | OK: Pause | Back: Exit</label>
+            <animation effect="fade" start="100" end="0" time="5000" delay="3000">WindowOpen</animation>
+        </control>
+    </controls>
+</window>
