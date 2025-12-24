@@ -180,6 +180,9 @@ class ImmichScreensaver(xbmcgui.WindowXML):
             self.close()
             return
 
+        # Clean up cache on startup to prevent memory/disk issues
+        self._cleanup_cache()
+
         # Initialize preloader
         enable_cache = self.addon.getSetting('enable_cache') != 'false'
         if enable_cache:
@@ -188,6 +191,9 @@ class ImmichScreensaver(xbmcgui.WindowXML):
             except ValueError:
                 preload_count = 3
             self.preloader = ImagePreloader(self.client, preload_count)
+
+        # Track images displayed for periodic cleanup
+        self.images_displayed = 0
 
         # Load images
         self._load_images()
@@ -240,6 +246,11 @@ class ImmichScreensaver(xbmcgui.WindowXML):
             if self.preloader:
                 self.preloader.preload(self.images[:5])
                 self.preloader.clear(image_data.get('id'))
+
+            # Periodic cache cleanup every 50 images to prevent memory buildup
+            self.images_displayed += 1
+            if self.images_displayed % 50 == 0:
+                self._cleanup_cache()
 
         self.close()
 
@@ -438,6 +449,35 @@ class ImmichScreensaver(xbmcgui.WindowXML):
         if make and model:
             return model if make.lower() in model.lower() else f"{make} {model}"
         return model or make or ''
+
+    def _cleanup_cache(self):
+        """Clean up cache to prevent memory/disk issues."""
+        try:
+            cache_size = self.client.get_cache_size()
+            xbmc.log(f"[screensaver.immich] Cache size: {cache_size:.1f} MB", xbmc.LOGINFO)
+
+            # Clear cache if over 200MB
+            if cache_size > 200:
+                self.client.clear_cache(max_age_days=0)  # Clear all
+                xbmc.log("[screensaver.immich] Cleared large cache (>200MB)", xbmc.LOGINFO)
+            else:
+                # Just clear files older than 1 hour to keep recent ones
+                import time
+                cache_dir = self.client.cache_dir
+                if os.path.exists(cache_dir):
+                    now = time.time()
+                    max_age = 3600  # 1 hour
+                    for filename in os.listdir(cache_dir):
+                        filepath = os.path.join(cache_dir, filename)
+                        try:
+                            if os.path.isfile(filepath):
+                                file_age = now - os.path.getmtime(filepath)
+                                if file_age > max_age:
+                                    os.remove(filepath)
+                        except OSError:
+                            pass
+        except Exception as e:
+            xbmc.log(f"[screensaver.immich] Cache cleanup error: {e}", xbmc.LOGWARNING)
 
     def _show_error(self, message):
         xbmc.log(f"[screensaver.immich] Error: {message}", xbmc.LOGERROR)
